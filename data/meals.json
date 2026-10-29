@@ -1,0 +1,903 @@
+{
+ "version": "261030",
+ "note": "칼로리·단백질은 일반 1인분 대략값(±20%). 외식·편의점은 shopping 없음.",
+ "default_disliked_tags": [
+  "요거트",
+  "오트밀"
+ ],
+ "slot_ratio": {
+  "운동일": {
+   "아침": 0.25,
+   "점심": 0.3,
+   "운동전": 0.1,
+   "저녁": 0.25,
+   "간식": 0.1
+  },
+  "쉬는날": {
+   "아침": 0.25,
+   "점심": 0.35,
+   "저녁": 0.3,
+   "간식": 0.1
+  }
+ },
+ "pick_rule": [
+  "끼니마다 그 slot 이 있는 메뉴 중 싫어요 id·싫어요 태그를 뺀다",
+  "목표 단백질(하루 단백질 × 끼니 비율)에 가장 가까운 순 → 같으면 목표 칼로리에 가까운 순 → 같은 주에 2번 넘게 나온 메뉴는 뒤로",
+  "'싫어요' 누르면: 그 id 를 영구 제외 목록에 넣고 같은 끼니에서 다음 후보(단백질 차이가 가장 작은 것)로 바꾼다 · '이 재료 전부 싫어요'를 누르면 tags 단위로 뺀다",
+  "하루 합이 목표 칼로리 ±10% 밖이면 간식 끼니를 바꿔 맞추고, 그래도 넘치면 밥 양 안내(반 공기 ↔ 1공기)",
+  "'외식만'·'집밥만'·'편의점 허용' 토글로 kind 를 거른다(기본: 평일 점심은 외식·편의점 · 나머지 집·간편)"
+ ],
+ "shopping_rule": "이번 주 7일 메뉴의 shopping 을 item 이름으로 묶어 개수·g 를 더한다 · 계란은 판(30개) 단위로 올림 · 쌀밥·김치처럼 집에 있는 것은 '집에 있음' 체크로 숨김",
+ "meals": [
+  {
+   "id": "b_egg_rice",
+   "name": "계란 3개 스크램블 + 밥 반 공기 + 김치",
+   "slots": [
+    "아침"
+   ],
+   "kcal": 430,
+   "protein_g": 24,
+   "tags": [
+    "계란"
+   ],
+   "kind": "집",
+   "shopping": [
+    {
+     "item": "계란",
+     "qty": "3개"
+    },
+    {
+     "item": "쌀밥",
+     "qty": "반 공기"
+    }
+   ]
+  },
+  {
+   "id": "b_meetree_ball",
+   "name": "미트리 닭가슴살 볼 1팩 + 바나나 1개",
+   "slots": [
+    "아침",
+    "운동전"
+   ],
+   "kcal": 300,
+   "protein_g": 22,
+   "tags": [
+    "닭"
+   ],
+   "kind": "간편",
+   "shopping": [
+    {
+     "item": "미트리 닭가슴살 볼",
+     "qty": "1팩"
+    },
+    {
+     "item": "바나나",
+     "qty": "1개"
+    }
+   ]
+  },
+  {
+   "id": "b_tofu_soup",
+   "name": "순두부 계란국 + 밥 반 공기",
+   "slots": [
+    "아침"
+   ],
+   "kcal": 400,
+   "protein_g": 22,
+   "tags": [
+    "콩",
+    "계란"
+   ],
+   "kind": "집",
+   "shopping": [
+    {
+     "item": "순두부",
+     "qty": "1봉"
+    },
+    {
+     "item": "계란",
+     "qty": "1개"
+    },
+    {
+     "item": "쌀밥",
+     "qty": "반 공기"
+    }
+   ]
+  },
+  {
+   "id": "b_toast_egg_ham",
+   "name": "통밀 식빵 2장 + 계란 2 + 슬라이스 햄 2장",
+   "slots": [
+    "아침"
+   ],
+   "kcal": 450,
+   "protein_g": 28,
+   "tags": [
+    "계란",
+    "돼지",
+    "밀"
+   ],
+   "kind": "집",
+   "shopping": [
+    {
+     "item": "통밀 식빵",
+     "qty": "2장"
+    },
+    {
+     "item": "계란",
+     "qty": "2개"
+    },
+    {
+     "item": "슬라이스 햄",
+     "qty": "2장"
+    }
+   ]
+  },
+  {
+   "id": "b_cvs_egg_kimbap",
+   "name": "편의점: 삶은 계란 2 + 참치김밥 1줄",
+   "slots": [
+    "아침",
+    "점심"
+   ],
+   "kcal": 520,
+   "protein_g": 25,
+   "tags": [
+    "계란",
+    "생선"
+   ],
+   "kind": "편의점",
+   "shopping": []
+  },
+  {
+   "id": "b_protein_milk",
+   "name": "단백질 음료 1병 + 고구마 1개(150g)",
+   "slots": [
+    "아침",
+    "운동전",
+    "간식"
+   ],
+   "kcal": 330,
+   "protein_g": 22,
+   "tags": [
+    "우유"
+   ],
+   "kind": "간편",
+   "shopping": [
+    {
+     "item": "단백질 음료",
+     "qty": "1병"
+    },
+    {
+     "item": "고구마",
+     "qty": "1개"
+    }
+   ]
+  },
+  {
+   "id": "b_chicken_sweetpotato",
+   "name": "닭가슴살(100g) + 고구마 1개 + 방울토마토",
+   "slots": [
+    "아침",
+    "점심"
+   ],
+   "kcal": 380,
+   "protein_g": 30,
+   "tags": [
+    "닭"
+   ],
+   "kind": "집",
+   "shopping": [
+    {
+     "item": "닭가슴살",
+     "qty": "100g"
+    },
+    {
+     "item": "고구마",
+     "qty": "1개"
+    },
+    {
+     "item": "방울토마토",
+     "qty": "한 줌"
+    }
+   ]
+  },
+  {
+   "id": "l_chicken_rice",
+   "name": "닭가슴살 덮밥(닭 150g + 밥 1공기 + 채소)",
+   "slots": [
+    "점심",
+    "저녁"
+   ],
+   "kcal": 620,
+   "protein_g": 45,
+   "tags": [
+    "닭"
+   ],
+   "kind": "집",
+   "shopping": [
+    {
+     "item": "닭가슴살",
+     "qty": "150g"
+    },
+    {
+     "item": "쌀밥",
+     "qty": "1공기"
+    },
+    {
+     "item": "양파·애호박",
+     "qty": "조금"
+    }
+   ]
+  },
+  {
+   "id": "l_jeyuk",
+   "name": "제육볶음 정식(밥 2/3)",
+   "slots": [
+    "점심"
+   ],
+   "kcal": 700,
+   "protein_g": 35,
+   "tags": [
+    "돼지"
+   ],
+   "kind": "외식",
+   "shopping": []
+  },
+  {
+   "id": "l_bibimbap_egg",
+   "name": "비빔밥 + 계란 프라이 1개 추가",
+   "slots": [
+    "점심"
+   ],
+   "kcal": 650,
+   "protein_g": 25,
+   "tags": [
+    "계란"
+   ],
+   "kind": "외식",
+   "shopping": []
+  },
+  {
+   "id": "l_dakgalbi",
+   "name": "닭갈비(1인분) + 밥 반 공기",
+   "slots": [
+    "점심",
+    "저녁"
+   ],
+   "kcal": 650,
+   "protein_g": 40,
+   "tags": [
+    "닭"
+   ],
+   "kind": "외식",
+   "shopping": []
+  },
+  {
+   "id": "l_sundubu",
+   "name": "순두부찌개 정식",
+   "slots": [
+    "점심"
+   ],
+   "kcal": 600,
+   "protein_g": 28,
+   "tags": [
+    "콩",
+    "해산물"
+   ],
+   "kind": "외식",
+   "shopping": []
+  },
+  {
+   "id": "l_kalguksu_no",
+   "name": "샤브샤브(소고기·채소) + 죽 조금",
+   "slots": [
+    "점심",
+    "저녁"
+   ],
+   "kcal": 650,
+   "protein_g": 40,
+   "tags": [
+    "소"
+   ],
+   "kind": "외식",
+   "shopping": []
+  },
+  {
+   "id": "l_bulgogi",
+   "name": "불고기 정식(밥 2/3)",
+   "slots": [
+    "점심"
+   ],
+   "kcal": 680,
+   "protein_g": 35,
+   "tags": [
+    "소"
+   ],
+   "kind": "외식",
+   "shopping": []
+  },
+  {
+   "id": "l_saengsun",
+   "name": "고등어구이 정식",
+   "slots": [
+    "점심",
+    "저녁"
+   ],
+   "kcal": 650,
+   "protein_g": 35,
+   "tags": [
+    "생선"
+   ],
+   "kind": "외식",
+   "shopping": []
+  },
+  {
+   "id": "l_poke",
+   "name": "포케(닭 또는 연어 · 밥 반)",
+   "slots": [
+    "점심"
+   ],
+   "kcal": 550,
+   "protein_g": 32,
+   "tags": [
+    "닭"
+   ],
+   "kind": "외식",
+   "shopping": []
+  },
+  {
+   "id": "l_cvs_chicken_lunchbox",
+   "name": "편의점: 닭가슴살 도시락 + 삶은 계란 1",
+   "slots": [
+    "점심",
+    "저녁"
+   ],
+   "kcal": 600,
+   "protein_g": 38,
+   "tags": [
+    "닭",
+    "계란"
+   ],
+   "kind": "편의점",
+   "shopping": []
+  },
+  {
+   "id": "l_cvs_salad_chicken",
+   "name": "편의점: 닭가슴살 샐러드 + 주먹밥 1",
+   "slots": [
+    "점심"
+   ],
+   "kcal": 480,
+   "protein_g": 30,
+   "tags": [
+    "닭"
+   ],
+   "kind": "편의점",
+   "shopping": []
+  },
+  {
+   "id": "l_kimchi_tuna_rice",
+   "name": "참치 김치볶음밥(참치 1캔 · 밥 1공기)",
+   "slots": [
+    "점심",
+    "저녁"
+   ],
+   "kcal": 620,
+   "protein_g": 32,
+   "tags": [
+    "생선"
+   ],
+   "kind": "집",
+   "shopping": [
+    {
+     "item": "참치캔",
+     "qty": "1캔"
+    },
+    {
+     "item": "김치",
+     "qty": "조금"
+    },
+    {
+     "item": "쌀밥",
+     "qty": "1공기"
+    }
+   ]
+  },
+  {
+   "id": "p_banana_meetree",
+   "name": "바나나 1 + 미트리 닭가슴살 볼 반 팩",
+   "slots": [
+    "운동전"
+   ],
+   "kcal": 220,
+   "protein_g": 12,
+   "tags": [
+    "닭"
+   ],
+   "kind": "간편",
+   "shopping": [
+    {
+     "item": "바나나",
+     "qty": "1개"
+    },
+    {
+     "item": "미트리 닭가슴살 볼",
+     "qty": "반 팩"
+    }
+   ]
+  },
+  {
+   "id": "p_rice_cake_milk",
+   "name": "가래떡 2줄 + 단백질 음료",
+   "slots": [
+    "운동전"
+   ],
+   "kcal": 330,
+   "protein_g": 22,
+   "tags": [
+    "우유"
+   ],
+   "kind": "간편",
+   "shopping": [
+    {
+     "item": "가래떡",
+     "qty": "2줄"
+    },
+    {
+     "item": "단백질 음료",
+     "qty": "1병"
+    }
+   ]
+  },
+  {
+   "id": "p_sweetpotato_egg",
+   "name": "고구마 1개 + 삶은 계란 2",
+   "slots": [
+    "운동전",
+    "간식"
+   ],
+   "kcal": 290,
+   "protein_g": 13,
+   "tags": [
+    "계란"
+   ],
+   "kind": "집",
+   "shopping": [
+    {
+     "item": "고구마",
+     "qty": "1개"
+    },
+    {
+     "item": "계란",
+     "qty": "2개"
+    }
+   ]
+  },
+  {
+   "id": "p_cvs_onigiri_bar",
+   "name": "편의점: 삼각김밥 1 + 단백질 바 1",
+   "slots": [
+    "운동전"
+   ],
+   "kcal": 380,
+   "protein_g": 18,
+   "tags": [
+    "밀"
+   ],
+   "kind": "편의점",
+   "shopping": []
+  },
+  {
+   "id": "p_banana_only",
+   "name": "바나나 2개(시간 없을 때)",
+   "slots": [
+    "운동전"
+   ],
+   "kcal": 200,
+   "protein_g": 2,
+   "tags": [],
+   "kind": "간편",
+   "shopping": [
+    {
+     "item": "바나나",
+     "qty": "2개"
+    }
+   ]
+  },
+  {
+   "id": "d_pork_neck",
+   "name": "목살 구이(150g) + 쌈채소 + 밥 반",
+   "slots": [
+    "저녁"
+   ],
+   "kcal": 650,
+   "protein_g": 35,
+   "tags": [
+    "돼지"
+   ],
+   "kind": "집",
+   "shopping": [
+    {
+     "item": "돼지 목살",
+     "qty": "150g"
+    },
+    {
+     "item": "쌈채소",
+     "qty": "1봉"
+    },
+    {
+     "item": "쌀밥",
+     "qty": "반 공기"
+    }
+   ]
+  },
+  {
+   "id": "d_beef_rice",
+   "name": "소고기(우둔 150g) 볶음 + 밥 2/3",
+   "slots": [
+    "저녁"
+   ],
+   "kcal": 620,
+   "protein_g": 45,
+   "tags": [
+    "소"
+   ],
+   "kind": "집",
+   "shopping": [
+    {
+     "item": "소고기 우둔",
+     "qty": "150g"
+    },
+    {
+     "item": "쌀밥",
+     "qty": "2/3공기"
+    },
+    {
+     "item": "양파",
+     "qty": "1/2개"
+    }
+   ]
+  },
+  {
+   "id": "d_salmon",
+   "name": "연어 스테이크(150g) + 감자 1 + 샐러드",
+   "slots": [
+    "저녁"
+   ],
+   "kcal": 600,
+   "protein_g": 35,
+   "tags": [
+    "생선"
+   ],
+   "kind": "집",
+   "shopping": [
+    {
+     "item": "연어",
+     "qty": "150g"
+    },
+    {
+     "item": "감자",
+     "qty": "1개"
+    },
+    {
+     "item": "샐러드 채소",
+     "qty": "1봉"
+    }
+   ]
+  },
+  {
+   "id": "d_tofu_kimchi",
+   "name": "두부김치 + 계란 2 + 밥 반",
+   "slots": [
+    "저녁"
+   ],
+   "kcal": 560,
+   "protein_g": 32,
+   "tags": [
+    "콩",
+    "돼지",
+    "계란"
+   ],
+   "kind": "집",
+   "shopping": [
+    {
+     "item": "두부",
+     "qty": "1모"
+    },
+    {
+     "item": "김치",
+     "qty": "조금"
+    },
+    {
+     "item": "계란",
+     "qty": "2개"
+    },
+    {
+     "item": "쌀밥",
+     "qty": "반 공기"
+    }
+   ]
+  },
+  {
+   "id": "d_chicken_breast_steak",
+   "name": "닭가슴살 스테이크 2개 + 현미밥 2/3",
+   "slots": [
+    "저녁",
+    "점심"
+   ],
+   "kcal": 560,
+   "protein_g": 46,
+   "tags": [
+    "닭"
+   ],
+   "kind": "간편",
+   "shopping": [
+    {
+     "item": "닭가슴살 스테이크",
+     "qty": "2개"
+    },
+    {
+     "item": "현미밥",
+     "qty": "2/3공기"
+    }
+   ]
+  },
+  {
+   "id": "d_shabu_home",
+   "name": "집 샤브샤브(소 150g + 채소 + 두부)",
+   "slots": [
+    "저녁"
+   ],
+   "kcal": 560,
+   "protein_g": 45,
+   "tags": [
+    "소",
+    "콩"
+   ],
+   "kind": "집",
+   "shopping": [
+    {
+     "item": "샤브샤브용 소고기",
+     "qty": "150g"
+    },
+    {
+     "item": "알배추·버섯",
+     "qty": "1봉씩"
+    },
+    {
+     "item": "두부",
+     "qty": "반 모"
+    }
+   ]
+  },
+  {
+   "id": "d_chicken_soup",
+   "name": "닭백숙(닭다리 2 · 껍질 빼고) + 밥 반",
+   "slots": [
+    "저녁"
+   ],
+   "kcal": 600,
+   "protein_g": 42,
+   "tags": [
+    "닭"
+   ],
+   "kind": "집",
+   "shopping": [
+    {
+     "item": "닭다리",
+     "qty": "2개"
+    },
+    {
+     "item": "쌀밥",
+     "qty": "반 공기"
+    }
+   ]
+  },
+  {
+   "id": "d_out_samgyeopsal",
+   "name": "외식: 삼겹살 대신 목살·항정 1.5인분 + 밥 반 · 냉면 X",
+   "slots": [
+    "저녁"
+   ],
+   "kcal": 800,
+   "protein_g": 40,
+   "tags": [
+    "돼지"
+   ],
+   "kind": "외식",
+   "shopping": []
+  },
+  {
+   "id": "d_out_chicken",
+   "name": "외식: 치킨이면 구운 치킨 반 마리 · 맥주 대신 제로 음료",
+   "slots": [
+    "저녁"
+   ],
+   "kcal": 750,
+   "protein_g": 55,
+   "tags": [
+    "닭"
+   ],
+   "kind": "외식",
+   "shopping": []
+  },
+  {
+   "id": "s_eggs",
+   "name": "삶은 계란 2개",
+   "slots": [
+    "간식"
+   ],
+   "kcal": 150,
+   "protein_g": 12,
+   "tags": [
+    "계란"
+   ],
+   "kind": "집",
+   "shopping": [
+    {
+     "item": "계란",
+     "qty": "2개"
+    }
+   ]
+  },
+  {
+   "id": "s_milk",
+   "name": "저지방 우유 1팩(200ml)",
+   "slots": [
+    "간식"
+   ],
+   "kcal": 90,
+   "protein_g": 6,
+   "tags": [
+    "우유"
+   ],
+   "kind": "간편",
+   "shopping": [
+    {
+     "item": "저지방 우유",
+     "qty": "1팩"
+    }
+   ]
+  },
+  {
+   "id": "s_protein_shake",
+   "name": "단백질 쉐이크 1스쿱(물)",
+   "slots": [
+    "간식",
+    "운동전"
+   ],
+   "kcal": 120,
+   "protein_g": 24,
+   "tags": [
+    "우유"
+   ],
+   "kind": "간편",
+   "shopping": [
+    {
+     "item": "단백질 파우더",
+     "qty": "1스쿱"
+    }
+   ]
+  },
+  {
+   "id": "s_meetree_ball",
+   "name": "미트리 닭가슴살 볼 1팩",
+   "slots": [
+    "간식"
+   ],
+   "kcal": 180,
+   "protein_g": 18,
+   "tags": [
+    "닭"
+   ],
+   "kind": "간편",
+   "shopping": [
+    {
+     "item": "미트리 닭가슴살 볼",
+     "qty": "1팩"
+    }
+   ]
+  },
+  {
+   "id": "s_nuts",
+   "name": "견과류 1봉(25g)",
+   "slots": [
+    "간식"
+   ],
+   "kcal": 150,
+   "protein_g": 5,
+   "tags": [
+    "견과"
+   ],
+   "kind": "간편",
+   "shopping": [
+    {
+     "item": "하루 견과",
+     "qty": "1봉"
+    }
+   ]
+  },
+  {
+   "id": "s_cheese_stick",
+   "name": "스트링 치즈 2개",
+   "slots": [
+    "간식"
+   ],
+   "kcal": 140,
+   "protein_g": 12,
+   "tags": [
+    "우유"
+   ],
+   "kind": "간편",
+   "shopping": [
+    {
+     "item": "스트링 치즈",
+     "qty": "2개"
+    }
+   ]
+  },
+  {
+   "id": "s_cvs_chicken_bar",
+   "name": "편의점: 닭가슴살 바 1개",
+   "slots": [
+    "간식"
+   ],
+   "kcal": 110,
+   "protein_g": 15,
+   "tags": [
+    "닭"
+   ],
+   "kind": "편의점",
+   "shopping": []
+  },
+  {
+   "id": "s_greek_yogurt",
+   "name": "그릭요거트 + 꿀(기본 제외)",
+   "slots": [
+    "간식",
+    "아침"
+   ],
+   "kcal": 200,
+   "protein_g": 15,
+   "tags": [
+    "요거트"
+   ],
+   "kind": "집",
+   "shopping": [
+    {
+     "item": "그릭요거트",
+     "qty": "150g"
+    }
+   ]
+  },
+  {
+   "id": "b_oatmeal",
+   "name": "오트밀 + 우유 + 바나나(기본 제외)",
+   "slots": [
+    "아침"
+   ],
+   "kcal": 400,
+   "protein_g": 18,
+   "tags": [
+    "오트밀",
+    "우유"
+   ],
+   "kind": "집",
+   "shopping": [
+    {
+     "item": "오트밀",
+     "qty": "50g"
+    },
+    {
+     "item": "우유",
+     "qty": "200ml"
+    },
+    {
+     "item": "바나나",
+     "qty": "1개"
+    }
+   ]
+  }
+ ]
+}

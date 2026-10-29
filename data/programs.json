@@ -1,0 +1,446 @@
+{
+ "version": "261030",
+ "note": "priority 1이 먼저. 시간 예산(rules.session_budget)에 맞춰 priority 순으로 넣고 넘치면 뒤에서 뺀다. reps 는 근육 목표 기준 — goal_mod 가 바꾼다.",
+ "days": {
+  "F1": {
+   "name": "전신 1",
+   "warmup": "full",
+   "cooldown": "full",
+   "items": [
+    {
+     "ex": "incline_db_press",
+     "sets": 3,
+     "reps": "8-10",
+     "priority": 1
+    },
+    {
+     "ex": "lat_pulldown",
+     "sets": 3,
+     "reps": "8-10",
+     "priority": 1
+    },
+    {
+     "ex": "leg_press",
+     "sets": 3,
+     "reps": "10-12",
+     "priority": 2
+    },
+    {
+     "ex": "db_lateral_raise",
+     "sets": 3,
+     "reps": "12-15",
+     "priority": 2
+    },
+    {
+     "ex": "seated_cable_row",
+     "sets": 2,
+     "reps": "10-12",
+     "priority": 3
+    },
+    {
+     "ex": "plank",
+     "sets": 2,
+     "reps": "30초",
+     "priority": 4
+    }
+   ]
+  },
+  "F2": {
+   "name": "전신 2",
+   "warmup": "full",
+   "cooldown": "full",
+   "items": [
+    {
+     "ex": "machine_chest_press",
+     "sets": 3,
+     "reps": "10-12",
+     "priority": 1
+    },
+    {
+     "ex": "one_arm_db_row",
+     "sets": 3,
+     "reps": "10-12",
+     "priority": 1
+    },
+    {
+     "ex": "db_rdl",
+     "sets": 3,
+     "reps": "10",
+     "priority": 2
+    },
+    {
+     "ex": "db_shoulder_press",
+     "sets": 3,
+     "reps": "8-10",
+     "priority": 2
+    },
+    {
+     "ex": "face_pull",
+     "sets": 2,
+     "reps": "15",
+     "priority": 3
+    },
+    {
+     "ex": "cable_crunch",
+     "sets": 2,
+     "reps": "12-15",
+     "priority": 4
+    }
+   ]
+  },
+  "A3": {
+   "name": "상체 전부",
+   "warmup": "upper_push",
+   "cooldown": "upper",
+   "items": [
+    {
+     "ex": "incline_db_press",
+     "sets": 4,
+     "reps": "8-10",
+     "priority": 1
+    },
+    {
+     "ex": "lat_pulldown",
+     "sets": 4,
+     "reps": "8-10",
+     "priority": 1
+    },
+    {
+     "ex": "db_lateral_raise",
+     "sets": 3,
+     "reps": "12-15",
+     "priority": 2
+    },
+    {
+     "ex": "seated_cable_row",
+     "sets": 3,
+     "reps": "10-12",
+     "priority": 2
+    },
+    {
+     "ex": "cable_fly_low_high",
+     "sets": 2,
+     "reps": "12-15",
+     "priority": 3
+    },
+    {
+     "ex": "db_curl",
+     "sets": 2,
+     "reps": "10-12",
+     "priority": 4
+    },
+    {
+     "ex": "cable_pushdown",
+     "sets": 2,
+     "reps": "10-12",
+     "priority": 4
+    }
+   ]
+  },
+  "B3": {
+   "name": "하체 + 어깨",
+   "warmup": "lower",
+   "cooldown": "full",
+   "items": [
+    {
+     "ex": "leg_press",
+     "sets": 3,
+     "reps": "10-12",
+     "priority": 1
+    },
+    {
+     "ex": "db_shoulder_press",
+     "sets": 3,
+     "reps": "8-10",
+     "priority": 1
+    },
+    {
+     "ex": "db_rdl",
+     "sets": 3,
+     "reps": "10",
+     "priority": 2
+    },
+    {
+     "ex": "cable_lateral_raise",
+     "sets": 3,
+     "reps": "12-15",
+     "priority": 2
+    },
+    {
+     "ex": "rear_delt_fly",
+     "sets": 3,
+     "reps": "15",
+     "priority": 3
+    },
+    {
+     "ex": "plank",
+     "sets": 3,
+     "reps": "40초",
+     "priority": 4
+    }
+   ]
+  },
+  "U_A": {
+   "name": "상체A 가슴·어깨",
+   "warmup": "upper_push",
+   "cooldown": "upper",
+   "items": [
+    {
+     "ex": "incline_db_press",
+     "sets": 4,
+     "reps": "8-10",
+     "priority": 1
+    },
+    {
+     "ex": "db_lateral_raise",
+     "sets": 4,
+     "reps": "12-15",
+     "priority": 1
+    },
+    {
+     "ex": "machine_chest_press",
+     "sets": 3,
+     "reps": "10-12",
+     "priority": 2
+    },
+    {
+     "ex": "db_shoulder_press",
+     "sets": 3,
+     "reps": "8-10",
+     "priority": 2
+    },
+    {
+     "ex": "cable_fly_low_high",
+     "sets": 3,
+     "reps": "12-15",
+     "priority": 3
+    }
+   ]
+  },
+  "L_S": {
+   "name": "하체 + 어깨",
+   "warmup": "lower",
+   "cooldown": "lower",
+   "items": [
+    {
+     "ex": "leg_press",
+     "sets": 3,
+     "reps": "10-12",
+     "priority": 1
+    },
+    {
+     "ex": "cable_lateral_raise",
+     "sets": 3,
+     "reps": "12-15",
+     "priority": 1
+    },
+    {
+     "ex": "db_rdl",
+     "sets": 3,
+     "reps": "10",
+     "priority": 2
+    },
+    {
+     "ex": "rear_delt_fly",
+     "sets": 3,
+     "reps": "15",
+     "priority": 2
+    },
+    {
+     "ex": "plank",
+     "sets": 3,
+     "reps": "40초",
+     "priority": 3
+    },
+    {
+     "ex": "cable_crunch",
+     "sets": 3,
+     "reps": "12-15",
+     "priority": 4
+    }
+   ]
+  },
+  "U_B": {
+   "name": "상체B 등·팔",
+   "warmup": "upper_pull",
+   "cooldown": "upper",
+   "items": [
+    {
+     "ex": "lat_pulldown",
+     "sets": 4,
+     "reps": "8-10",
+     "priority": 1
+    },
+    {
+     "ex": "seated_cable_row",
+     "sets": 3,
+     "reps": "10-12",
+     "priority": 1
+    },
+    {
+     "ex": "one_arm_db_row",
+     "sets": 3,
+     "reps": "10-12",
+     "priority": 2
+    },
+    {
+     "ex": "face_pull",
+     "sets": 3,
+     "reps": "15",
+     "priority": 2
+    },
+    {
+     "ex": "db_curl",
+     "sets": 3,
+     "reps": "10-12",
+     "priority": 3
+    },
+    {
+     "ex": "hammer_curl",
+     "sets": 2,
+     "reps": "12",
+     "priority": 4
+    }
+   ]
+  },
+  "U_C": {
+   "name": "상체C 어깨·팔 + 윗가슴",
+   "warmup": "upper_push",
+   "cooldown": "upper",
+   "items": [
+    {
+     "ex": "incline_machine_press",
+     "sets": 3,
+     "reps": "10-12",
+     "priority": 1
+    },
+    {
+     "ex": "cable_lateral_raise",
+     "sets": 4,
+     "reps": "12-15",
+     "priority": 1
+    },
+    {
+     "ex": "rear_delt_fly",
+     "sets": 3,
+     "reps": "15",
+     "priority": 2
+    },
+    {
+     "ex": "cable_pushdown",
+     "sets": 3,
+     "reps": "10-12",
+     "priority": 2
+    },
+    {
+     "ex": "ez_curl",
+     "sets": 3,
+     "reps": "10",
+     "priority": 3
+    }
+   ]
+  },
+  "W_E": {
+   "name": "보강 — 등 너비 + 측면 어깨",
+   "warmup": "upper_pull",
+   "cooldown": "upper",
+   "items": [
+    {
+     "ex": "assisted_pullup",
+     "sets": 3,
+     "reps": "8-10",
+     "priority": 1
+    },
+    {
+     "ex": "machine_lateral_raise",
+     "sets": 4,
+     "reps": "12-15",
+     "priority": 1
+    },
+    {
+     "ex": "straight_arm_pulldown",
+     "sets": 3,
+     "reps": "12-15",
+     "priority": 2
+    },
+    {
+     "ex": "feet_up_pushup",
+     "sets": 3,
+     "reps": "최대-2",
+     "priority": 2
+    },
+    {
+     "ex": "band_pull_apart",
+     "sets": 3,
+     "reps": "20",
+     "priority": 3
+    },
+    {
+     "ex": "hanging_knee_raise",
+     "sets": 3,
+     "reps": "10-12",
+     "priority": 4
+    }
+   ]
+  }
+ },
+ "split": {
+  "2": {
+   "weeks": [
+    [
+     "F1",
+     "F2"
+    ]
+   ],
+   "note": "전신 2회 · 사이 2일 이상 쉬기"
+  },
+  "3": {
+   "weeks": [
+    [
+     "A3",
+     "B3",
+     "A3"
+    ],
+    [
+     "B3",
+     "A3",
+     "B3"
+    ]
+   ],
+   "note": "A/B 번갈아 · 2주 주기 · 상체 실루엣이면 A가 주 1.5회"
+  },
+  "4": {
+   "weeks": [
+    [
+     "U_A",
+     "L_S",
+     "U_B",
+     "U_C"
+    ]
+   ],
+   "note": "월 상체A · 화 하체+어깨 · 목 상체B · 금 상체C"
+  },
+  "5": {
+   "weeks": [
+    [
+     "U_A",
+     "L_S",
+     "U_B",
+     "U_C",
+     "W_E"
+    ]
+   ],
+   "note": "4회 + 보강 하루(등 너비 · 측면 어깨)"
+  }
+ },
+ "experience_rule": {
+  "처음": "모든 운동을 beginner_swap(머신)으로 바꾼다 · 세트 −1(최소 2) · RIR 3 · 첫 2주는 무게보다 자세 · 5회 선택 시 4회로 낮추라고 안내",
+  "조금": "템플릿 그대로 · RIR 2",
+  "자세 앎": "템플릿 그대로 · 큰 운동(compound) 마지막 세트만 RIR 1"
+ },
+ "focus_rule": {
+  "상체 실루엣": "기본 템플릿",
+  "균형": "4·5회에서 U_C 를 L_S 한 번 더로 바꾼다(주 하체 2회)",
+  "복부·코어": "각 날 끝에 plank 또는 cable_crunch 2세트를 priority 3으로 더한다"
+ }
+}

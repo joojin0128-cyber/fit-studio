@@ -1,0 +1,633 @@
+{
+ "version": "261030",
+ "note": "rest_sec 는 근육 목표 기준. 감량·탄탄 목표는 compound 90초·isolation 45초로 줄인다(rules.json goal_mod).",
+ "exercises": [
+  {
+   "id": "incline_db_press",
+   "name": "인클라인 덤벨 프레스",
+   "primary": "윗가슴",
+   "secondary": [
+    "어깨앞",
+    "삼두"
+   ],
+   "equipment": "덤벨·벤치",
+   "kind": "compound",
+   "rest_sec": 120,
+   "beginner_swap": "incline_machine_press",
+   "alternatives": [
+    "incline_machine_press",
+    "feet_up_pushup"
+   ],
+   "video_query": "인클라인 덤벨 프레스 자세"
+  },
+  {
+   "id": "incline_machine_press",
+   "name": "인클라인 머신 프레스",
+   "primary": "윗가슴",
+   "secondary": [
+    "어깨앞",
+    "삼두"
+   ],
+   "equipment": "머신",
+   "kind": "compound",
+   "rest_sec": 90,
+   "beginner_swap": null,
+   "alternatives": [
+    "incline_db_press",
+    "feet_up_pushup"
+   ],
+   "video_query": "인클라인 머신 프레스 자세"
+  },
+  {
+   "id": "machine_chest_press",
+   "name": "머신 체스트 프레스",
+   "primary": "가슴",
+   "secondary": [
+    "삼두"
+   ],
+   "equipment": "머신",
+   "kind": "compound",
+   "rest_sec": 90,
+   "beginner_swap": null,
+   "alternatives": [
+    "db_bench_press",
+    "pushup"
+   ],
+   "video_query": "머신 체스트 프레스 자세"
+  },
+  {
+   "id": "db_bench_press",
+   "name": "덤벨 벤치 프레스",
+   "primary": "가슴",
+   "secondary": [
+    "삼두",
+    "어깨앞"
+   ],
+   "equipment": "덤벨·벤치",
+   "kind": "compound",
+   "rest_sec": 90,
+   "beginner_swap": "machine_chest_press",
+   "alternatives": [
+    "machine_chest_press",
+    "pushup"
+   ],
+   "video_query": "덤벨 벤치 프레스 자세"
+  },
+  {
+   "id": "cable_fly_low_high",
+   "name": "케이블 크로스오버(아래→위)",
+   "primary": "윗가슴",
+   "secondary": [],
+   "equipment": "케이블",
+   "kind": "isolation",
+   "rest_sec": 60,
+   "beginner_swap": null,
+   "alternatives": [
+    "db_fly",
+    "pec_deck"
+   ],
+   "video_query": "케이블 크로스오버 자세"
+  },
+  {
+   "id": "db_fly",
+   "name": "덤벨 플라이",
+   "primary": "가슴",
+   "secondary": [],
+   "equipment": "덤벨·벤치",
+   "kind": "isolation",
+   "rest_sec": 60,
+   "beginner_swap": "pec_deck",
+   "alternatives": [
+    "pec_deck",
+    "cable_fly_low_high"
+   ],
+   "video_query": "덤벨 플라이 자세"
+  },
+  {
+   "id": "pec_deck",
+   "name": "펙덱 플라이",
+   "primary": "가슴",
+   "secondary": [],
+   "equipment": "머신",
+   "kind": "isolation",
+   "rest_sec": 60,
+   "beginner_swap": null,
+   "alternatives": [
+    "db_fly",
+    "cable_fly_low_high"
+   ],
+   "video_query": "펙덱 플라이 자세"
+  },
+  {
+   "id": "pushup",
+   "name": "푸시업",
+   "primary": "가슴",
+   "secondary": [
+    "삼두",
+    "코어"
+   ],
+   "equipment": "맨몸",
+   "kind": "compound",
+   "rest_sec": 60,
+   "beginner_swap": null,
+   "alternatives": [
+    "machine_chest_press"
+   ],
+   "video_query": "푸시업 자세"
+  },
+  {
+   "id": "feet_up_pushup",
+   "name": "발 올린 푸시업",
+   "primary": "윗가슴",
+   "secondary": [
+    "삼두"
+   ],
+   "equipment": "맨몸",
+   "kind": "compound",
+   "rest_sec": 60,
+   "beginner_swap": null,
+   "alternatives": [
+    "incline_machine_press"
+   ],
+   "video_query": "발 올린 푸시업 자세"
+  },
+  {
+   "id": "db_shoulder_press",
+   "name": "덤벨 숄더 프레스(앉아서)",
+   "primary": "어깨앞",
+   "secondary": [
+    "측면삼각",
+    "삼두"
+   ],
+   "equipment": "덤벨·벤치",
+   "kind": "compound",
+   "rest_sec": 90,
+   "beginner_swap": "machine_shoulder_press",
+   "alternatives": [
+    "machine_shoulder_press"
+   ],
+   "video_query": "덤벨 숄더 프레스 자세"
+  },
+  {
+   "id": "machine_shoulder_press",
+   "name": "머신 숄더 프레스",
+   "primary": "어깨앞",
+   "secondary": [
+    "측면삼각",
+    "삼두"
+   ],
+   "equipment": "머신",
+   "kind": "compound",
+   "rest_sec": 90,
+   "beginner_swap": null,
+   "alternatives": [
+    "db_shoulder_press"
+   ],
+   "video_query": "머신 숄더 프레스 자세"
+  },
+  {
+   "id": "db_lateral_raise",
+   "name": "덤벨 사이드 레터럴 레이즈",
+   "primary": "측면삼각",
+   "secondary": [],
+   "equipment": "덤벨",
+   "kind": "isolation",
+   "rest_sec": 60,
+   "beginner_swap": null,
+   "alternatives": [
+    "cable_lateral_raise",
+    "machine_lateral_raise"
+   ],
+   "video_query": "덤벨 사이드 레터럴 레이즈 자세"
+  },
+  {
+   "id": "cable_lateral_raise",
+   "name": "케이블 사이드 레이즈",
+   "primary": "측면삼각",
+   "secondary": [],
+   "equipment": "케이블",
+   "kind": "isolation",
+   "rest_sec": 60,
+   "beginner_swap": null,
+   "alternatives": [
+    "db_lateral_raise",
+    "machine_lateral_raise"
+   ],
+   "video_query": "케이블 사이드 레이즈 자세"
+  },
+  {
+   "id": "machine_lateral_raise",
+   "name": "머신 사이드 레이즈",
+   "primary": "측면삼각",
+   "secondary": [],
+   "equipment": "머신",
+   "kind": "isolation",
+   "rest_sec": 60,
+   "beginner_swap": null,
+   "alternatives": [
+    "db_lateral_raise"
+   ],
+   "video_query": "머신 사이드 레이즈 자세"
+  },
+  {
+   "id": "rear_delt_fly",
+   "name": "리어 델트 플라이(머신)",
+   "primary": "후면삼각",
+   "secondary": [
+    "등위"
+   ],
+   "equipment": "머신",
+   "kind": "isolation",
+   "rest_sec": 60,
+   "beginner_swap": null,
+   "alternatives": [
+    "face_pull",
+    "band_pull_apart"
+   ],
+   "video_query": "리어 델트 플라이 자세"
+  },
+  {
+   "id": "face_pull",
+   "name": "페이스 풀",
+   "primary": "후면삼각",
+   "secondary": [
+    "등위"
+   ],
+   "equipment": "케이블",
+   "kind": "isolation",
+   "rest_sec": 60,
+   "beginner_swap": null,
+   "alternatives": [
+    "rear_delt_fly"
+   ],
+   "video_query": "페이스 풀 자세"
+  },
+  {
+   "id": "lat_pulldown",
+   "name": "랫 풀다운(넓게)",
+   "primary": "광배",
+   "secondary": [
+    "이두"
+   ],
+   "equipment": "머신",
+   "kind": "compound",
+   "rest_sec": 120,
+   "beginner_swap": null,
+   "alternatives": [
+    "assisted_pullup"
+   ],
+   "video_query": "랫 풀다운 자세"
+  },
+  {
+   "id": "assisted_pullup",
+   "name": "어시스트 풀업",
+   "primary": "광배",
+   "secondary": [
+    "이두"
+   ],
+   "equipment": "머신",
+   "kind": "compound",
+   "rest_sec": 120,
+   "beginner_swap": null,
+   "alternatives": [
+    "lat_pulldown"
+   ],
+   "video_query": "어시스트 풀업 자세"
+  },
+  {
+   "id": "seated_cable_row",
+   "name": "시티드 케이블 로우",
+   "primary": "등중앙",
+   "secondary": [
+    "광배",
+    "이두"
+   ],
+   "equipment": "케이블",
+   "kind": "compound",
+   "rest_sec": 90,
+   "beginner_swap": null,
+   "alternatives": [
+    "machine_row",
+    "one_arm_db_row"
+   ],
+   "video_query": "시티드 케이블 로우 자세"
+  },
+  {
+   "id": "machine_row",
+   "name": "머신 로우",
+   "primary": "등중앙",
+   "secondary": [
+    "광배"
+   ],
+   "equipment": "머신",
+   "kind": "compound",
+   "rest_sec": 90,
+   "beginner_swap": null,
+   "alternatives": [
+    "seated_cable_row"
+   ],
+   "video_query": "머신 로우 자세"
+  },
+  {
+   "id": "one_arm_db_row",
+   "name": "원암 덤벨 로우",
+   "primary": "광배",
+   "secondary": [
+    "등중앙",
+    "이두"
+   ],
+   "equipment": "덤벨·벤치",
+   "kind": "compound",
+   "rest_sec": 60,
+   "beginner_swap": "machine_row",
+   "alternatives": [
+    "machine_row",
+    "seated_cable_row"
+   ],
+   "video_query": "원암 덤벨 로우 자세"
+  },
+  {
+   "id": "straight_arm_pulldown",
+   "name": "스트레이트 암 풀다운",
+   "primary": "광배",
+   "secondary": [],
+   "equipment": "케이블",
+   "kind": "isolation",
+   "rest_sec": 60,
+   "beginner_swap": null,
+   "alternatives": [
+    "lat_pulldown"
+   ],
+   "video_query": "스트레이트 암 풀다운 자세"
+  },
+  {
+   "id": "db_curl",
+   "name": "덤벨 컬",
+   "primary": "이두",
+   "secondary": [],
+   "equipment": "덤벨",
+   "kind": "isolation",
+   "rest_sec": 60,
+   "beginner_swap": null,
+   "alternatives": [
+    "cable_curl",
+    "ez_curl"
+   ],
+   "video_query": "덤벨 컬 자세"
+  },
+  {
+   "id": "hammer_curl",
+   "name": "해머 컬",
+   "primary": "이두",
+   "secondary": [
+    "전완"
+   ],
+   "equipment": "덤벨",
+   "kind": "isolation",
+   "rest_sec": 60,
+   "beginner_swap": null,
+   "alternatives": [
+    "rope_hammer_curl"
+   ],
+   "video_query": "해머 컬 자세"
+  },
+  {
+   "id": "rope_hammer_curl",
+   "name": "로프 해머 컬",
+   "primary": "이두",
+   "secondary": [
+    "전완"
+   ],
+   "equipment": "케이블",
+   "kind": "isolation",
+   "rest_sec": 60,
+   "beginner_swap": null,
+   "alternatives": [
+    "hammer_curl"
+   ],
+   "video_query": "로프 해머 컬 자세"
+  },
+  {
+   "id": "cable_curl",
+   "name": "케이블 컬",
+   "primary": "이두",
+   "secondary": [],
+   "equipment": "케이블",
+   "kind": "isolation",
+   "rest_sec": 60,
+   "beginner_swap": null,
+   "alternatives": [
+    "db_curl"
+   ],
+   "video_query": "케이블 컬 자세"
+  },
+  {
+   "id": "ez_curl",
+   "name": "EZ바 컬",
+   "primary": "이두",
+   "secondary": [],
+   "equipment": "바벨",
+   "kind": "isolation",
+   "rest_sec": 60,
+   "beginner_swap": "cable_curl",
+   "alternatives": [
+    "db_curl"
+   ],
+   "video_query": "EZ바 컬 자세"
+  },
+  {
+   "id": "cable_pushdown",
+   "name": "케이블 푸시다운",
+   "primary": "삼두",
+   "secondary": [],
+   "equipment": "케이블",
+   "kind": "isolation",
+   "rest_sec": 60,
+   "beginner_swap": null,
+   "alternatives": [
+    "oh_db_extension"
+   ],
+   "video_query": "케이블 푸시다운 자세"
+  },
+  {
+   "id": "oh_db_extension",
+   "name": "오버헤드 덤벨 익스텐션",
+   "primary": "삼두",
+   "secondary": [],
+   "equipment": "덤벨",
+   "kind": "isolation",
+   "rest_sec": 60,
+   "beginner_swap": "cable_pushdown",
+   "alternatives": [
+    "cable_pushdown"
+   ],
+   "video_query": "오버헤드 덤벨 익스텐션 자세"
+  },
+  {
+   "id": "leg_press",
+   "name": "레그 프레스",
+   "primary": "하체",
+   "secondary": [
+    "엉덩이"
+   ],
+   "equipment": "머신",
+   "kind": "compound",
+   "rest_sec": 120,
+   "beginner_swap": null,
+   "alternatives": [
+    "goblet_squat"
+   ],
+   "video_query": "레그 프레스 자세"
+  },
+  {
+   "id": "goblet_squat",
+   "name": "고블릿 스쿼트",
+   "primary": "하체",
+   "secondary": [
+    "엉덩이",
+    "코어"
+   ],
+   "equipment": "덤벨",
+   "kind": "compound",
+   "rest_sec": 90,
+   "beginner_swap": "leg_press",
+   "alternatives": [
+    "leg_press"
+   ],
+   "video_query": "고블릿 스쿼트 자세"
+  },
+  {
+   "id": "db_rdl",
+   "name": "루마니안 데드리프트(덤벨)",
+   "primary": "햄스트링",
+   "secondary": [
+    "엉덩이",
+    "허리"
+   ],
+   "equipment": "덤벨",
+   "kind": "compound",
+   "rest_sec": 90,
+   "beginner_swap": "leg_curl",
+   "alternatives": [
+    "leg_curl"
+   ],
+   "video_query": "루마니안 데드리프트 자세"
+  },
+  {
+   "id": "leg_curl",
+   "name": "레그 컬 머신",
+   "primary": "햄스트링",
+   "secondary": [],
+   "equipment": "머신",
+   "kind": "isolation",
+   "rest_sec": 60,
+   "beginner_swap": null,
+   "alternatives": [
+    "db_rdl"
+   ],
+   "video_query": "레그 컬 머신 자세"
+  },
+  {
+   "id": "leg_extension",
+   "name": "레그 익스텐션",
+   "primary": "하체",
+   "secondary": [],
+   "equipment": "머신",
+   "kind": "isolation",
+   "rest_sec": 60,
+   "beginner_swap": null,
+   "alternatives": [
+    "goblet_squat"
+   ],
+   "video_query": "레그 익스텐션 자세"
+  },
+  {
+   "id": "walking_lunge",
+   "name": "워킹 런지(덤벨)",
+   "primary": "하체",
+   "secondary": [
+    "엉덩이"
+   ],
+   "equipment": "덤벨",
+   "kind": "compound",
+   "rest_sec": 90,
+   "beginner_swap": "leg_press",
+   "alternatives": [
+    "leg_press"
+   ],
+   "video_query": "워킹 런지 자세"
+  },
+  {
+   "id": "plank",
+   "name": "플랭크",
+   "primary": "코어",
+   "secondary": [],
+   "equipment": "맨몸",
+   "kind": "core",
+   "rest_sec": 45,
+   "beginner_swap": null,
+   "alternatives": [
+    "dead_bug"
+   ],
+   "video_query": "플랭크 자세"
+  },
+  {
+   "id": "dead_bug",
+   "name": "데드버그",
+   "primary": "코어",
+   "secondary": [],
+   "equipment": "맨몸",
+   "kind": "core",
+   "rest_sec": 45,
+   "beginner_swap": null,
+   "alternatives": [
+    "plank"
+   ],
+   "video_query": "데드버그 자세"
+  },
+  {
+   "id": "cable_crunch",
+   "name": "케이블 크런치",
+   "primary": "복부",
+   "secondary": [],
+   "equipment": "케이블",
+   "kind": "core",
+   "rest_sec": 45,
+   "beginner_swap": null,
+   "alternatives": [
+    "hanging_knee_raise"
+   ],
+   "video_query": "케이블 크런치 자세"
+  },
+  {
+   "id": "hanging_knee_raise",
+   "name": "행잉 니 레이즈",
+   "primary": "복부",
+   "secondary": [],
+   "equipment": "철봉",
+   "kind": "core",
+   "rest_sec": 45,
+   "beginner_swap": "cable_crunch",
+   "alternatives": [
+    "cable_crunch"
+   ],
+   "video_query": "행잉 니 레이즈 자세"
+  },
+  {
+   "id": "band_pull_apart",
+   "name": "밴드 풀어파트",
+   "primary": "후면삼각",
+   "secondary": [
+    "등위"
+   ],
+   "equipment": "밴드",
+   "kind": "isolation",
+   "rest_sec": 45,
+   "beginner_swap": null,
+   "alternatives": [
+    "face_pull"
+   ],
+   "video_query": "밴드 풀어파트 자세"
+  }
+ ]
+}
