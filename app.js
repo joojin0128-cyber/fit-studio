@@ -74,24 +74,33 @@ function startCur(day, date) {
     const wd = day.deload && w ? Math.round(w * 0.9 * 2) / 2 : w;
     sets[it.id] = Array.from({ length: it.sets }, (_, k) => ({ w: wd, r: pr.r ?? last?.sets[k]?.r ?? it.reps.lo, done: false }));
   }
-  S.cur = { date, key: day.key, sets, warm: [], cool: [], cardio: { sec: 0, done: false }, tired: false, finished: false };
+  S.cur = { date, key: day.key, sets, warm: [], cool: [], cardio: { sec: 0, done: false }, tired: false, finished: false, startedAt: Date.now() };
+  audioPrime(); wake();
   save();
 }
 function lastOf(id) { for (let i = S.sessions.length - 1; i >= 0; i--) { const s = S.sessions[i].ex[id]; if (s && s.length) return { date: S.sessions[i].date, sets: s }; } return null; }
 
+const hasData = (C) => C && (Object.values(C.sets).some((a) => a.some((x) => x.done)) || C.cardio.done || C.cardio.sec > 60);
+const extraTrain = () => [...new Set([...S.sessions.map((s) => s.date), S.cur && !S.cur.finished && hasData(S.cur) ? S.cur.date : null].filter(Boolean))];
+function carryOver() {   // QA 261030 ①: 자정을 넘겨도 기록이 사라지지 않게 — 시작 6시간 안이면 이어 가고, 넘으면 체크한 세트를 그날 기록으로 저장
+  const C = S.cur; if (!C || C.finished || C.date === ymd()) return C ? C.date : ymd();
+  if (Date.now() - (C.startedAt || 0) < 6 * 3600e3) return C.date;
+  if (hasData(C)) saveSession(ENG.buildDay(D, S.profile, C.key, { swaps: S.swaps[C.key], deload: ENG.deloadNow(S, C.date) }));
+  S.cur = null; save(); return ymd();
+}
 function today(v) {
-  const date = ymd(), p = S.profile, n = N(), train = ENG.isTrainDay(p, date);
-  $('#sub').textContent = `${md(date)}(${DOW[new Date().getDay()]})`;
-  if (S.cur && S.cur.date !== date && !S.cur.finished) S.cur = null;                     // 어제 못 끝낸 건 넘긴다(다음 순서부터)
+  const date = carryOver(), p = S.profile, n = N(), train = ENG.isTrainDay(p, date) || extraTrain().includes(date);
+  $('#sub').textContent = `${md(date)}(${DOW[new Date(date + 'T12:00').getDay()]})${date !== ymd() ? ' · 이어서' : ''}`;
   const day = curDay(date), started = S.cur && S.cur.date === date;
   let work;
   if (started && S.cur.finished) work = `<div class="card"><h2>오늘 운동 끝 👏</h2><p>${esc(day.name)} · 기록 저장됨</p><button id="reopen">기록 고치기</button></div>`;
   else if (!started && !train) work = `<div class="card"><h2>오늘은 쉬는 날</h2><p>${esc(D.rules.cardio[p.goal].rest_day)}</p><p class="hint">다음 순서: ${esc(day.name)}</p><button class="big" id="anyway">그래도 운동하기</button></div>`;
   else work = workoutCard(day, started);
-  const meals = ENG.planWeekMeals(D, p, n, S.diet, date)[date], eaten = S.diet.eaten[date] || {};
+  const meals = ENG.planWeekMeals(D, p, n, S.diet, date, extraTrain())[date], eaten = S.diet.eaten[date] || {};
   const got = Object.entries(meals).reduce((a, [sl, id]) => a + (eaten[sl] && D.mealById[id] ? D.mealById[id].protein_g : 0), 0);
   const kc = train ? n.kcal : n.restKcal;
-  v.innerHTML = `${work}
+  const backup = S.sessions.length >= 3 && (!S.lastExport || (Date.now() - S.lastExport) > 14 * 864e5);      // QA 참고 ③
+  v.innerHTML = `${backup ? '<div class="card"><p class="small">기록은 이 폰 안에만 있어요 — 가끔 백업해 두세요</p><button id="bk">지금 백업(JSON 내보내기)</button></div>' : ''}${work}
    <div class="card" id="dietCard"><h2>오늘 식단 <span class="muted small">${train ? '운동일' : '쉬는 날'}</span></h2>
     <div class="row" style="justify-content:space-between;align-items:baseline"><b style="font-size:30px">${got}<span class="muted" style="font-size:18px"> / ${n.protein}g 단백질</span></b></div>
     <div class="prog" style="height:16px"><i style="width:${Math.min(100, Math.round(got / n.protein * 100))}%"></i></div>
@@ -100,7 +109,8 @@ function today(v) {
     <button class="ghost" id="toDiet">식단 바꾸기 · 장보기 →</button></div>`;
   v.querySelectorAll('#dietCard .check').forEach((el) => el.onclick = () => { const sl = el.dataset.sl; S.diet.eaten[date] = { ...eaten, [sl]: !eaten[sl] }; save(); render(); });
   $('#toDiet').onclick = () => { tab = 'diet'; render(); };
-  if ($('#anyway')) $('#anyway').onclick = () => { startCur(day, date); render(); };
+  if ($('#bk')) $('#bk').onclick = exportJson;
+  if ($('#anyway')) $('#anyway').onclick = () => { audioPrime(); startCur(day, date); render(); };
   if ($('#reopen')) $('#reopen').onclick = () => { S.cur.finished = false; S.done = Math.max(0, S.done - 1); S.sessions = S.sessions.filter((s) => !(s.date === date && s.key === S.cur.key)); save(); render(); };
   if (started && !S.cur.finished || (!started && train)) bindWorkout(day, date);
 }
@@ -131,7 +141,8 @@ function workoutCard(day, started) {
 }
 function progressBar() { let t = 0, d = 0; for (const id in S.cur.sets) for (const s of S.cur.sets[id]) { t++; if (s.done) d++; } return `<div class="prog"><i style="width:${t ? Math.round(d / t * 100) : 0}%"></i></div><p class="hint">세트 ${d}/${t}</p>`; }
 function bindWorkout(day, date) {
-  if ($('#start')) { $('#start').onclick = () => { startCur(day, date); render(); }; return; }
+  if ($('#start')) { $('#start').onclick = () => { audioPrime(); startCur(day, date); render(); }; return; }
+  wake();
   const C = S.cur;
   document.querySelectorAll('.check[data-l]').forEach((el) => el.onclick = () => { const a = C[el.dataset.l], i = +el.dataset.i; const k = a.indexOf(i); k < 0 ? a.push(i) : a.splice(k, 1); save(); render(); });
   document.querySelectorAll('[data-ex]').forEach((card) => {
@@ -144,7 +155,7 @@ function bindWorkout(day, date) {
     card.querySelectorAll('button.tick').forEach((b) => b.onclick = () => {
       const s = C.sets[id][+b.dataset.k];
       if (ex.equipment !== '맨몸' && (s.w === '' || isNaN(+s.w))) { alert('무게를 먼저 넣어 주세요'); return; }
-      s.done = !s.done; save(); render(); if (s.done) restTimer(it.rest, `${ex.name} 쉬는 시간`);
+      audioPrime(); s.done = !s.done; save(); render(); if (s.done) restTimer(it.rest, `${ex.name} 쉬는 시간`);
     });
     card.querySelector('[data-alt]').onclick = () => {
       const alts = [ex.beginner_swap, ...(ex.alternatives || [])].filter((x, i, a) => x && a.indexOf(x) === i && x !== id);
@@ -161,20 +172,25 @@ function bindWorkout(day, date) {
   $('#fin').onclick = () => finish(day);
 }
 function finish(day) {
+  const C = S.cur;
+  const any = day.items.some((it) => C.sets[it.id].some((s) => s.done));
+  if (!any && !C.cardio.done && !confirm('체크한 세트가 없어요. 그래도 끝낼까요?')) return;
+  saveSession(day); save(); render();
+}
+function saveSession(day) {
   const C = S.cur, ex = {};
   let fails = 0;
   for (const it of day.items) {
     const done = C.sets[it.id].filter((s) => s.done).map((s) => ({ w: +s.w || 0, r: +s.r || 0 }));
     if (done.length) { ex[it.id] = done; S.prog[it.id] = ENG.progress(D, S.prog, it, done); if (S.prog[it.id].fails) fails++; }
   }
-  if (!Object.keys(ex).length && !C.cardio.done && !confirm('체크한 세트가 없어요. 그래도 끝낼까요?')) return;
   S.sessions = S.sessions.filter((s) => !(s.date === C.date && s.key === C.key));
   S.sessions.push({ date: C.date, key: C.key, name: day.name, ex, cardioMin: Math.round(C.cardio.sec / 60) || (C.cardio.done ? day.cardio.minutes : 0), tired: C.tired, deload: day.deload });
   S.done += 1; C.finished = true; stopCardio();
   const wk = mondayOf(C.date), wkS = S.sessions.filter((s) => s.date >= wk);                // 디로드 앞당김: 못 채움 2개 이상 · 피곤함 3번
   const failEx = Object.keys(S.prog).filter((id) => S.prog[id].fails && wkS.some((s) => s.ex[id])).length;
   if (failEx >= 2 || wkS.filter((s) => s.tired).length >= 3) S.earlyDeloadWeek = addDays(wk, 7);
-  save(); render();
+  S.sessions.sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0));
 }
 
 // ── 유산소 · 쉬는 시간 · 숫자 패드 ──
@@ -183,16 +199,27 @@ function toggleCardio() { if (cardioRun) stopCardio(); else { const st = Date.no
 function stopCardio() { if (cardioRun) clearInterval(cardioRun); cardioRun = null; if (S.cur) save(); }
 let restT = null, AC = null;
 function restTimer(sec, label) {
-  const box = $('#timer'); let end = Date.now() + sec * 1000; box.hidden = false; $('#tLabel').textContent = label;
-  const close = () => { clearInterval(restT); restT = null; box.hidden = true; };
-  const tick = () => { const left = Math.max(0, Math.round((end - Date.now()) / 1000)); $('#tNum').textContent = `${Math.floor(left / 60)}:${String(left % 60).padStart(2, '0')}`; if (left <= 0) { close(); buzz(); } };
+  const box = $('#timer'); let end = Date.now() + sec * 1000, rang = false; box.hidden = false; box.classList.remove('end'); $('#tLabel').textContent = label; $('#tSkip').textContent = '건너뛰기';
+  const close = () => { clearInterval(restT); restT = null; box.hidden = true; box.classList.remove('end'); };
+  const tick = () => { const left = Math.max(0, Math.round((end - Date.now()) / 1000));
+    if (left > 0) { $('#tNum').textContent = `${Math.floor(left / 60)}:${String(left % 60).padStart(2, '0')}`; return; }
+    if (rang) return; rang = true; clearInterval(restT); restT = null;                    // QA 261030 ②: 0 이면 칸을 남겨 '끝'을 보여 준다
+    box.classList.add('end'); $('#tNum').textContent = '끝'; $('#tLabel').textContent = '쉬는 시간 끝 — 다음 세트!'; $('#tSkip').textContent = '닫기'; buzz(); };
   clearInterval(restT); restT = setInterval(tick, 250); tick();
-  $('#tMinus').onclick = () => { end -= 15000; tick(); }; $('#tPlus').onclick = () => { end += 15000; tick(); }; $('#tSkip').onclick = close;
+  $('#tMinus').onclick = () => { if (!rang) { end -= 15000; tick(); } }; $('#tPlus').onclick = () => { if (rang) { rang = false; box.classList.remove('end'); end = Date.now() + 15000; $('#tLabel').textContent = label; $('#tSkip').textContent = '건너뛰기'; restT = setInterval(tick, 250); } else end += 15000; tick(); };
+  $('#tSkip').onclick = close;
+}
+function audioPrime() {     // iOS 는 터치 안에서 만든(또는 다시 깨운) 소리만 낸다 — 세트 체크 · 시작 터치 때 준비
+  try { AC = AC || new (window.AudioContext || window.webkitAudioContext)(); if (AC.state === 'suspended') AC.resume(); } catch (e) {}
 }
 function buzz() {
-  try { navigator.vibrate && navigator.vibrate([250, 120, 250]); } catch (e) {}
-  try { AC = AC || new (window.AudioContext || window.webkitAudioContext)(); const o = AC.createOscillator(), g = AC.createGain(); o.frequency.value = 880; g.gain.value = 0.15; o.connect(g); g.connect(AC.destination); o.start(); o.stop(AC.currentTime + 0.35); } catch (e) {}
+  try { navigator.vibrate && navigator.vibrate([250, 120, 250]); } catch (e) {}                 // 안드로이드만(아이폰은 지원 안 함)
+  try { if (!AC) return; if (AC.state === 'suspended') AC.resume();
+    for (const [t, f] of [[0, 880], [0.45, 880], [0.9, 1175]]) { const o = AC.createOscillator(), g = AC.createGain(); o.frequency.value = f; g.gain.value = 0.2; o.connect(g); g.connect(AC.destination); o.start(AC.currentTime + t); o.stop(AC.currentTime + t + 0.3); } } catch (e) {}
 }
+let WL = null;
+async function wake() { try { if ('wakeLock' in navigator && !WL) { WL = await navigator.wakeLock.request('screen'); WL.addEventListener('release', () => { WL = null; }); } } catch (e) {} }   // 운동 중 화면 꺼짐 방지(지원하는 기기만)
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && S && S.cur && !S.cur.finished) wake(); });
 function numpad(label, val, dec, cb) {
   const box = $('#pad'); let s = val === '' || val == null ? '' : String(val); box.hidden = false; $('#pLabel').textContent = label;
   const keys = ['1', '2', '3', '4', '5', '6', '7', '8', '9', dec ? '.' : '', '0', '⌫'];
@@ -263,13 +290,14 @@ function bindCharts(v) { v.querySelectorAll('svg.chart').forEach((svg) => svg.ad
 
 // ── ④ 식단 ──
 function diet(v) {
-  const date = ymd(), p = S.profile, n = N(), week = ENG.planWeekMeals(D, p, n, S.diet, date), eaten = S.diet.eaten[date] || {};
+  const date = ymd(), p = S.profile, n = N(), xt = extraTrain(), week = ENG.planWeekMeals(D, p, n, S.diet, date, xt), eaten = S.diet.eaten[date] || {};
   $('#sub').textContent = '식단';
   const shop = ENG.shopping(D, week, S.diet.have);
-  v.innerHTML = `<div class="card"><h2>오늘 <span class="hint">단백질 ${n.protein}g · ${ENG.isTrainDay(p, date) ? n.kcal : n.restKcal}kcal · 지방 ${n.fat}g · 탄수 ${n.carb}g</span></h2>
+  const trainToday = ENG.isTrainDay(p, date) || xt.includes(date);
+  v.innerHTML = `<div class="card"><h2>오늘 <span class="hint">단백질 ${n.protein}g · ${trainToday ? n.kcal : n.restKcal}kcal · 지방 ${n.fat}g · 탄수 ${n.carb}g</span></h2>
    <div class="chips" id="mode">${['기본', '집밥만', '외식만', '편의점 허용'].map((m) => `<button data-v="${m}" class="${S.diet.mode === m ? 'on' : ''}">${m}</button>`).join('')}</div>
    ${Object.entries(week[date]).map(([sl, id]) => { const m = D.mealById[id]; return `<div class="meal" data-s="${sl}" data-id="${id || ''}"><span class="box ${eaten[sl] ? 'done' : ''}" data-a="eat">${eaten[sl] ? '✓' : ''}</span>
-     <div><b>${sl}</b> <span class="hint">${m ? `${m.protein_g}g · ${m.kcal}kcal · ${esc(m.kind)}` : ''}</span><div>${m ? esc(m.name) : '<span class="muted">후보가 없어요</span>'}</div></div>
+     <div><b>${sl}</b> <span class="hint">${m ? `${m.protein_g}g · ${m.kcal}kcal · ${esc(m.kind)}` : ''}</span>${m && !ENG.kindsFor(S.diet.mode, sl, date).includes(m.kind) ? `<div class="hint">${esc(S.diet.mode)} 메뉴가 이 끼니엔 없어 ${esc(m.kind)}으로</div>` : ''}<div>${m ? esc(m.name) : '<span class="muted">후보가 없어요</span>'}</div></div>
      <div class="col"><button class="small" data-a="next">다른 것</button><button class="small danger" data-a="no">싫어요</button>${m && m.tags.length ? `<button class="small ghost" data-a="tag">재료 싫어요</button>` : ''}</div></div>`; }).join('')}</div>
    <div class="card"><h2>이번 주 장보기 <span class="hint">월~일 · 집밥 · 간편</span></h2>${shop.map((s) => `<div class="check" data-have="${esc(s.item)}"><span class="box"></span><span>${esc(s.item)} <span class="muted">${esc(s.txt)}</span></span></div>`).join('') || '<p class="muted">없음</p>'}
     ${S.diet.have.length ? `<p class="hint">집에 있음으로 숨김: ${S.diet.have.map(esc).join(', ')} <button class="small ghost" id="unhave">다시 보기</button></p>` : '<p class="hint">이미 집에 있는 건 눌러서 숨기세요</p>'}</div>`;
@@ -279,7 +307,7 @@ function diet(v) {
     if (a === 'eat') S.diet.eaten[date] = { ...eaten, [sl]: !eaten[sl] };
     else if (a === 'tag' && m) { const t = prompt(`이 재료 전부 빼기: ${m.tags.join(', ')}\n뺄 재료 이름을 적어 주세요`, m.tags[0]); if (!t || !m.tags.includes(t.trim())) return; if (!S.diet.noTags.includes(t.trim())) S.diet.noTags.push(t.trim()); }
     else { if (a === 'no' && id && !S.diet.noIds.includes(id)) S.diet.noIds.push(id);
-      const nx = ENG.nextCandidate(D, p, n, S.diet, date, sl, id); S.diet.swap[date] = { ...(S.diet.swap[date] || {}), [sl]: nx }; }
+      const nx = ENG.nextCandidate(D, p, n, S.diet, date, sl, id, xt); S.diet.swap[date] = { ...(S.diet.swap[date] || {}), [sl]: nx }; }
     save(); render();
   });
   v.querySelectorAll('[data-have]').forEach((el) => el.onclick = () => { S.diet.have.push(el.dataset.have); save(); render(); });
@@ -309,12 +337,13 @@ function settings(v) {
   $('#sTheme').onclick = (e) => { const b = e.target.closest('button'); if (b) { S.theme = b.dataset.v; save(); render(); } };
   v.querySelectorAll('[data-un]').forEach((b) => b.onclick = () => { S.diet.noIds = S.diet.noIds.filter((x) => x !== b.dataset.un); save(); render(); });
   v.querySelectorAll('[data-ut]').forEach((b) => b.onclick = () => { S.diet.noTags = S.diet.noTags.filter((x) => x !== b.dataset.ut); save(); render(); });
-  $('#sOut').onclick = () => { const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([JSON.stringify(S, null, 1)], { type: 'application/json' })); a.download = `헬스스튜디오_${ymd()}.json`; document.body.appendChild(a); a.click(); a.remove(); };
+  $('#sOut').onclick = exportJson;
   $('#sIn').onclick = () => $('#sFile').click();
   $('#sFile').onchange = async (e) => { const f = e.target.files[0]; e.target.value = ''; if (!f) return; try { const d = JSON.parse(await f.text()); if (d.v !== 2 || !Array.isArray(d.sessions)) throw 0; if (!confirm('지금 기록을 이 파일 내용으로 바꿀까요?')) return; S = { ...blank(), ...d }; save(); render(); } catch (err) { alert('이 앱에서 내보낸 파일이 아니에요'); } };
   $('#sWipe').onclick = () => { if (confirm('모든 기록과 설정을 지울까요? 되돌릴 수 없어요') && confirm('정말 지울까요?')) { localStorage.removeItem(KEY); S = blank(); S.diet.noTags = [...D.meals.default_disliked_tags]; tab = 'today'; render(); } };
 }
 
+function exportJson() { S.lastExport = Date.now(); save(); const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([JSON.stringify(S, null, 1)], { type: 'application/json' })); a.download = `헬스스튜디오_${ymd()}.json`; document.body.appendChild(a); a.click(); a.remove(); render(); }
 // ── 시작 ──
 document.getElementById('tabs').addEventListener('click', (e) => { const b = e.target.closest('button'); if (!b) return; tab = b.dataset.tab; render(); window.scrollTo(0, 0); });
 async function boot() {

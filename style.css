@@ -62,3 +62,4 @@ svg.chart .hit{fill:transparent;cursor:pointer}
 svg.chart .bar{fill:var(--accent);opacity:.55}svg.chart .bar.ok{fill:var(--ok);opacity:.85}
 svg.chart .ax{fill:var(--muted);font-size:10px}
 .tip.on{color:var(--fg);font-weight:700}
+#timer.end .tbox{outline:4px solid var(--ok)}#timer.end #tNum{color:var(--ok)}

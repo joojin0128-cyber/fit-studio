@@ -101,15 +101,15 @@ const ENG = (() => {
     if (mode === '편의점 허용') return ['집', '간편', '외식', '편의점'];
     const wd = new Date(date + 'T12:00').getDay(); return slot === '점심' && wd >= 1 && wd <= 5 ? ['외식', '편의점'] : ['집', '간편'];
   }
-  function planWeekMeals(D, p, N, diet, fromDate) {
+  function planWeekMeals(D, p, N, diet, fromDate, extraTrain = []) {
     const mon = mondayOf(fromDate), out = {}, count = {};
     for (let i = 0; i < 7; i++) {
-      const date = addDays(mon, i), train = isTrainDay(p, date), ratio = slotsFor(D, train), kcal = train ? N.kcal : N.restKcal;
+      const date = addDays(mon, i), train = isTrainDay(p, date) || extraTrain.includes(date), ratio = slotsFor(D, train), kcal = train ? N.kcal : N.restKcal;
       out[date] = {};
       for (const [slot, r] of Object.entries(ratio)) {
         const tp = N.protein * r, tk = kcal * r, kinds = kindsFor(diet.mode, slot, date);
         let cand = D.meals.meals.filter((m) => m.slots.includes(slot) && !diet.noIds.includes(m.id) && !m.tags.some((t) => diet.noTags.includes(t)) && kinds.includes(m.kind));
-        if (!cand.length) cand = D.meals.meals.filter((m) => m.slots.includes(slot) && !diet.noIds.includes(m.id) && !m.tags.some((t) => diet.noTags.includes(t)));
+        if (!cand.length) cand = D.meals.meals.filter((m) => m.slots.includes(slot) && !diet.noIds.includes(m.id) && !m.tags.some((t) => diet.noTags.includes(t)));   // 그 모드 메뉴가 없는 끼니 — 화면이 '모드 메뉴 없음'을 안내
         const today = Object.values(out[date]);                                              // 같은 날 같은 메뉴 두 번은 뒤로
         cand.sort((a, b) => today.includes(a.id) - today.includes(b.id) || ((count[a.id] || 0) >= 2) - ((count[b.id] || 0) >= 2) || Math.abs(a.protein_g - tp) - Math.abs(b.protein_g - tp) || Math.abs(a.kcal - tk) - Math.abs(b.kcal - tk) || (count[a.id] || 0) - (count[b.id] || 0));
         const forced = diet.swap?.[date]?.[slot];
@@ -119,10 +119,12 @@ const ENG = (() => {
     }
     return out;
   }
-  function nextCandidate(D, p, N, diet, date, slot, curId) {     // 싫어요 · 다른 것 — 단백질 차이가 가장 작은 다음 후보
-    const train = isTrainDay(p, date), tp = N.protein * slotsFor(D, train)[slot], kinds = kindsFor(diet.mode, slot, date);
+  function nextCandidate(D, p, N, diet, date, slot, curId, extraTrain = []) {     // 싫어요 · 다른 것 — 단백질 차이가 가장 작은 다음 후보
+    const train = isTrainDay(p, date) || extraTrain.includes(date), tp = N.protein * slotsFor(D, train)[slot], kinds = kindsFor(diet.mode, slot, date);
     const cur = D.mealById[curId];
-    const cand = D.meals.meals.filter((m) => m.slots.includes(slot) && m.id !== curId && !diet.noIds.includes(m.id) && !m.tags.some((t) => diet.noTags.includes(t)) && kinds.includes(m.kind));
+    const ok = (m) => m.slots.includes(slot) && m.id !== curId && !diet.noIds.includes(m.id) && !m.tags.some((t) => diet.noTags.includes(t));
+    let cand = D.meals.meals.filter((m) => ok(m) && kinds.includes(m.kind));
+    if (!cand.length) cand = D.meals.meals.filter(ok);                                   // QA 참고 ①: 그 모드 메뉴가 없으면 전체에서
     cand.sort((a, b) => Math.abs(a.protein_g - (cur ? cur.protein_g : tp)) - Math.abs(b.protein_g - (cur ? cur.protein_g : tp)));
     return cand[0] ? cand[0].id : null;
   }
@@ -143,6 +145,6 @@ const ENG = (() => {
       return { item: a.item, txt };
     }).sort((x, y) => x.item.localeCompare(y.item, 'ko'));
   }
-  return { ymd, addDays, mondayOf, GOALS, bmi, numbers, parseReps, buildDay, sequence, nextKey, isTrainDay, progress, incFor, deloadNow, planWeekMeals, nextCandidate, shopping, parseQty };
+  return { kindsFor, ymd, addDays, mondayOf, GOALS, bmi, numbers, parseReps, buildDay, sequence, nextKey, isTrainDay, progress, incFor, deloadNow, planWeekMeals, nextCandidate, shopping, parseQty };
 })();
 if (typeof module !== 'undefined') module.exports = ENG;
