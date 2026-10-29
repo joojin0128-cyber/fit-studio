@@ -11,16 +11,50 @@ const ENG = (() => {
   // ① 숫자
   function bmi(p) { const m = p.height / 100; return p.weight / (m * m); }
   function bmiBand(R, b) { return R.bmi.bands_kr.find((x) => b < x.max).label; }
-  function numbers(R, p) {
-    const b = bmi(p);
-    const bmr = 10 * p.weight + 6.25 * p.height - 5 * p.age + (p.sex === 'f' ? -161 : 5);
+  // 인바디(30일 안) — 기획 rules.inbody: 결과지 기초대사량(없으면 370 + 21.6 × 제지방량) · 단백질은 제지방량 기준
+  const ibFresh = (ib, date) => ib && !ib.useMifflin && (new Date((date || ymd()) + 'T12:00') - new Date(ib.date + 'T12:00')) / 864e5 <= 30 ? ib : null;
+  const ffmOf = (ib) => ib.v.ffm ?? (ib.v.weight != null && ib.v.bfm != null ? ib.v.weight - ib.v.bfm : null);
+  function numbers(R, p, ibIn, date) {
+    const b = bmi(p), ib = ibFresh(ibIn, date), IB = R.inbody;
+    const mif = 10 * p.weight + 6.25 * p.height - 5 * p.age + (p.sex === 'f' ? -161 : 5);
+    const ffm = ib ? ffmOf(ib) : null;
+    const bmr = ib && (ib.v.bmr || ffm) ? (ib.v.bmr || 370 + 21.6 * ffm) : mif;
     const keep = bmr * R.activity_factor_by_sessions[String(p.freq)];
     let kcal = p.goal === '근육' ? keep + (b >= 25 ? 0 : 250) : p.goal === '체지방 감량' ? Math.max(bmr, keep * 0.8) : keep;
-    const basisW = b >= 30 ? 25 * (p.height / 100) ** 2 : p.weight;
-    const protein = basisW * R.protein_g_per_kg[p.goal];
+    let protein;
+    if (ib && ffm && IB) { const sug = suggestGoal(R, p, ib); const coef = p.goal === '탄탄(유지)' && sug && sug.both ? IB.protein.g_per_kg_ffm['근육'] : IB.protein.g_per_kg_ffm[p.goal];
+      const [lo, hi] = IB.protein.clamp_g_per_kg_bodyweight; protein = Math.min(hi * p.weight, Math.max(lo * p.weight, ffm * coef)); }
+    else { const basisW = b >= 30 ? 25 * (p.height / 100) ** 2 : p.weight; protein = basisW * R.protein_g_per_kg[p.goal]; }
     const fat = kcal * R.fat_ratio / 9, carb = (kcal - protein * 4 - kcal * R.fat_ratio) / 4;
     const r = Math.round;
-    return { bmi: Math.round(b * 10) / 10, band: bmiBand(R, b), bmr: r(bmr), keep: r(keep), kcal: r(kcal), restKcal: r(kcal) - 150, protein: r(protein), fat: r(fat), carb: r(carb) };
+    return { bmi: Math.round(b * 10) / 10, band: bmiBand(R, b), bmr: r(bmr), keep: r(keep), kcal: r(kcal), restKcal: r(kcal) - 150, protein: r(protein), fat: r(fat), carb: r(carb),
+      src: ib && (ib.v.bmr || ffm) ? 'inbody' : 'mifflin', mifflin: r(mif) };
+  }
+  // 골격근량 표준: 결과지 범위 → 없으면 키² × 22 × (남 .45 · 여 .40)
+  function smmStd(p, ib) { if (ib && ib.std && ib.std.smm) return ib.std.smm; const s = (p.height / 100) ** 2 * 22 * (p.sex === 'f' ? 0.40 : 0.45); return [Math.round(s * 0.9 * 10) / 10, Math.round(s * 1.1 * 10) / 10]; }
+  // 목표 제안(제안만 — 버튼을 눌러야 바뀐다)
+  function suggestGoal(R, p, ib) {
+    const G = R.inbody && R.inbody.goal_suggest; if (!G || !ib) return null;
+    const sx = p.sex === 'f' ? 'female' : 'male', pbf = ib.v.pbf, smm = ib.v.smm, why = [];
+    const high = pbf != null && pbf >= G.pbf_high[sx], very = pbf != null && pbf >= G.pbf_very_high[sx];
+    const lowS = smm != null && smm < smmStd(p, ib)[0];
+    if (high) why.push(`체지방률 ${pbf}% (${p.sex === 'f' ? '여' : '남'} ${G.pbf_high[sx]}% 이상)`);
+    if (lowS) why.push(`골격근량 ${smm}kg (표준 ${smmStd(p, ib)[0]}kg 미만)`);
+    if (high && lowS) return { goal: '탄탄(유지)', both: true, strong: very, why };
+    if (high) return { goal: '체지방 감량', strong: very, why, cardio: very ? 10 : 0 };
+    if (lowS) return { goal: '근육', why };
+    return null;
+  }
+  // 부위 보강: 표준 대비 90% 미만 또는 좌우 차 10% 이상 → 하루 최대 2개 · priority 3(시간 모자라면 먼저 빠짐)
+  function boosts(R, ib) {
+    const B = R.inbody && R.inbody.segment_boost; if (!B || !ib) return [];
+    const v = ib.v, out = [], pct = (k) => v[k + 'P'];
+    const low = { 팔: ['ra', 'la'], 몸통: ['tr'], 다리: ['rl', 'll'] };
+    for (const [seg, ks] of Object.entries(low)) if (ks.some((k) => pct(k) != null && pct(k) < 90)) for (const t of B.low[seg] || []) out.push({ ...t, seg, why: `${seg} 근육 표준 대비 ${Math.min(...ks.map(pct).filter((x) => x != null))}%` });
+    for (const [seg, [a, b]] of [['팔', ['ra', 'la']], ['다리', ['rl', 'll']]]) { if (v[a] == null || v[b] == null) continue;
+      const big = Math.max(v[a], v[b]), gap = (big - Math.min(v[a], v[b])) / big; const t = B.imbalance[seg];
+      if (gap >= 0.1 && t && typeof t === 'object') out.push({ ...t, seg, weak: v[a] < v[b] ? (seg === '팔' ? '오른팔' : '오른다리') : (seg === '팔' ? '왼팔' : '왼다리'), why: `좌우 차 ${Math.round(gap * 100)}%` }); }
+    return out;
   }
 
   // ② 프로그램
@@ -46,6 +80,8 @@ const ENG = (() => {
   function buildDay(D, p, key, opts = {}) {
     const { rules: R, programs: P, exById } = D, T = P.days[key], goal = p.goal;
     let items = T.items.map((it) => ({ ...it }));
+    for (const bo of (opts.boost || []).filter((x) => x.days.includes(key)).slice(0, 2)) if (!items.some((it) => it.ex === bo.ex) && exById[bo.ex])
+      items.push({ ex: bo.ex, sets: bo.sets, reps: /최대/.test(bo.reps) ? '8-15' : bo.reps.replace(/\(.*\)/, ''), priority: 3, boost: `${bo.seg} 보강 · ${bo.why}${bo.weak ? ' · 약한 쪽(' + bo.weak + ')부터' : ''}${bo.how ? ' · ' + bo.how : ''}${/최대/.test(bo.reps) ? ' · 최대 횟수 −2' : ''}` });
     if (p.focus === '복부·코어' && !items.some((it) => ['plank', 'cable_crunch'].includes(it.ex))) items.push({ ex: key === 'L_S' || key === 'B3' ? 'cable_crunch' : 'plank', sets: 2, reps: key === 'L_S' || key === 'B3' ? '12-15' : '30초', priority: 3 });
     const B = R.session_budget_min[String(p.minutes)] || R.session_budget_min['60'];
     let strengthMin = B.strength, cardioMin = B.cardio;
@@ -60,7 +96,7 @@ const ENG = (() => {
       const rest = restSec(R, ex, goal), t = sets * (40 + rest) + 60;
       if (out.length >= B.max_exercises || used + t > strengthMin * 60) continue;
       used += t;
-      out.push({ slot: it.ex, id, sets, reps: goalReps(R, ex, it, goal), rest, priority: it.priority });
+      out.push({ slot: it.ex, id, sets, reps: it.boost ? parseReps(it.reps) : goalReps(R, ex, it, goal), rest, priority: it.priority, boost: it.boost });
     }
     const b = bmi(p), C = R.cardio[goal];
     let cType = C.type, cMin = cardioMin;
@@ -145,6 +181,6 @@ const ENG = (() => {
       return { item: a.item, txt };
     }).sort((x, y) => x.item.localeCompare(y.item, 'ko'));
   }
-  return { kindsFor, ymd, addDays, mondayOf, GOALS, bmi, numbers, parseReps, buildDay, sequence, nextKey, isTrainDay, progress, incFor, deloadNow, planWeekMeals, nextCandidate, shopping, parseQty };
+  return { kindsFor, ymd, addDays, mondayOf, GOALS, bmi, numbers, ibFresh, smmStd, suggestGoal, boosts, parseReps, buildDay, sequence, nextKey, isTrainDay, progress, incFor, deloadNow, planWeekMeals, nextCandidate, shopping, parseQty };
 })();
 if (typeof module !== 'undefined') module.exports = ENG;

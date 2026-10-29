@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self'; connect-src 'self'; media-src 'self' data:; manifest-src 'self'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' data: blob:; style-src 'self' 'unsafe-inline'; script-src 'self' 'wasm-unsafe-eval'; worker-src 'self'; connect-src 'self'; media-src 'self' data:; manifest-src 'self'">
 <meta name="theme-color" content="#111418">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -24,6 +24,8 @@
 <div id="pad" hidden><div class="pbox"><div id="pLabel" class="muted"></div><div id="pVal">0</div>
  <div class="pgrid"></div></div></div>
 <script src="engine.js"></script>
+<script src="inbody.js"></script>
+<script src="ibui.js"></script>
 <script src="app.js"></script>
 </body>
 </html>
