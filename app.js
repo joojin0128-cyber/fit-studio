@@ -83,7 +83,8 @@ function lastOf(id) { for (let i = S.sessions.length - 1; i >= 0; i--) { const s
 const hasData = (C) => C && (Object.values(C.sets).some((a) => a.some((x) => x.done)) || C.cardio.done || C.cardio.sec > 60);
 const extraTrain = () => [...new Set([...S.sessions.map((s) => s.date), S.cur && !S.cur.finished && hasData(S.cur) ? S.cur.date : null].filter(Boolean))];
 function carryOver() {   // QA 261030 ①: 자정을 넘겨도 기록이 사라지지 않게 — 시작 6시간 안이면 이어 가고, 넘으면 체크한 세트를 그날 기록으로 저장
-  const C = S.cur; if (!C || C.finished || C.date === ymd()) return C ? C.date : ymd();
+  const C = S.cur; if (!C || C.date === ymd()) return ymd();
+  if (C.finished) { if (Date.now() - (C.startedAt || 0) < 6 * 3600e3) return C.date; S.cur = null; save(); return ymd(); }   // 재QA 261030: 끝낸 운동은 (6시간 지나면) 다음 날 새 카드로
   if (Date.now() - (C.startedAt || 0) < 6 * 3600e3) return C.date;
   if (hasData(C)) saveSession(ENG.buildDay(D, S.profile, C.key, { swaps: S.swaps[C.key], deload: ENG.deloadNow(S, C.date) }));
   S.cur = null; save(); return ymd();
