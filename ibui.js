@@ -129,7 +129,7 @@ async function ibRead(pc) {
         const res = await N.recognize(sub, {}, { blocks: true }); if (mode === 'line') await N.setParameters({ tessedit_pageseg_mode: '6' });
         return flat(res).flatMap((l) => l.words).map((x) => ({ t: x.t, b: { x0: x.b.x0 / k + r.x0, y0: x.b.y0 / k + r.y0, x1: x.b.x1 / k + r.x0, y1: x.b.y1 / k + r.y0 } })); } };
     // 이 폰이 기억한 칸 위치를 먼저 읽는다(기종 이름은 읽기 전엔 몰라 '기본' 에 모아 둔다)
-    const res = await INB.read(env, S.ibTpl['기본'] || {});
+    const res = await INB.read(env, S.ibTpl['기본'] || {}, { height: S.profile && S.profile.height });
     IBX.env = env; IBX.N = N; IBX.W = W; IBX.H = H;
     if (stop) return;
     step('끝', 100); ibConfirm(res);
@@ -155,6 +155,7 @@ function ibConfirm(res) {
      <div class="row" style="flex-wrap:nowrap"><input inputmode="decimal" data-ib="${k}" value="${esc(val(k))}">${IBX.pc ? `<button class="small ghost" data-loc="${k}" aria-label="${esc(f.name)} 사진에서 찾기">📍</button>` : ''}</div></div>`; };
   const nRead = IBF.filter((k) => res.how && res.how[k] === '읽음').length;
   v.innerHTML = `<div class="card"><h2>숫자 확인</h2><p class="hint">${IBX.pc ? `${IBF.length}칸 중 ${nRead}칸을 읽었어요${res.model ? ` · InBody ${esc(res.model)}` : ''}. 노란 칸은 꼭 결과지와 맞춰 보세요. 틀린 칸은 고치거나 📍를 눌러 사진에서 그 숫자를 누르면 다음부터 그 자리를 먼저 읽어요.` : '결과지를 보고 숫자를 넣어 주세요. 모르는 칸은 비워 두세요.'}</p>
+   ${res.weak ? `<div class="card sub ibweak"><b>사진 읽기가 약해요</b><p class="hint">기울었거나 흐린 것 같아요. 기울기 막대로 글줄을 격자에 맞춰 다시 읽으면 더 정확해요. 이대로 쓰려면 모든 칸을 결과지와 맞춰 주세요.</p>${IBX.pc ? '<button class="small primary" id="ibRetry">다시 찍기 · 맞추기</button>' : ''}</div>` : ''}
    <label>검사한 날</label><input type="date" id="ibDate" value="${ymd()}">
    ${wiz ? `<div class="grid2"><div><label>키(cm)</label><input id="ibH" inputmode="decimal" value="${esc(res.v.height ?? p.height ?? '')}"></div><div><label>나이</label><input id="ibA" inputmode="numeric" value="${esc(res.v.age ?? p.age ?? '')}"></div></div>
    <label>성별</label><div class="chips" id="ibSex">${[['m', '남'], ['f', '여']].map(([k, t]) => `<button type="button" data-v="${k}" class="${(res.sex || p.sex || 'm') === k ? 'on' : ''}">${t}</button>`).join('')}</div>` : ''}
@@ -184,14 +185,17 @@ function ibConfirm(res) {
   function bmiCheck() {   // (가) 키를 넣거나 고칠 때마다 BMI 가 체중 ÷ 키² 와 맞는지
     const q = prof(), row = v.querySelector('.ibrow[data-k=bmi]'), b = num('bmi'), w = num('weight'); if (!row) return;
     const bad = q.height > 100 && w != null && b != null && Math.abs(w / (q.height / 100) ** 2 - b) > 0.3;
-    row.classList.toggle('doubt', bad || (!!res.doubt.bmi && !row.dataset.touched && !(q.height > 100 && w != null && b != null)));
+    row.classList.toggle('doubt', bad || (!!res.doubt.bmi && !row.dataset.touched));
     let t = row.querySelector('.bmiwarn'); if (!t) { t = document.createElement('span'); t.className = 'hint bmiwarn'; row.querySelector('label').appendChild(t); }
     t.textContent = bad ? ` 체중 ÷ 키² = ${(w / (q.height / 100) ** 2).toFixed(1)}` : '';
+    const wr = v.querySelector('.ibrow[data-k=weight]');   // (가) BMI 가 안 맞거나 키에 비해 말이 안 되는 체중이면 체중도 노랗게 — 체중은 마법사 체중으로 들어간다
+    if (wr && !wr.dataset.touched) { const bm = q.height > 100 && w != null ? w / (q.height / 100) ** 2 : null; wr.classList.toggle('doubt', !!res.doubt.weight || w == null || bad || (bm != null && (bm < 13 || bm > 50))); }
   }
   v.querySelectorAll('[data-ib]').forEach((el) => el.addEventListener('input', () => { const r = el.closest('.ibrow'); r.dataset.touched = 1; r.classList.remove('doubt'); check(); bmiCheck(); }));
   if (wiz) ['#ibH', '#ibA'].forEach((s) => $(s).addEventListener('input', () => { check(); bmiCheck(); }));
   check(); bmiCheck();
   v.querySelectorAll('[data-loc]').forEach((b) => b.onclick = () => ibLocate(b.dataset.loc));
+  if ($('#ibRetry')) $('#ibRetry').onclick = () => { const m = IBX.mode; ibDone(); ibStart(m); };
   $('#ibCancel').onclick = () => { ibDone(); render(); };
   $('#ibSave').onclick = () => {
     const rec = { date: $('#ibDate').value || ymd(), model: res.model || null, v: {}, std: {} };

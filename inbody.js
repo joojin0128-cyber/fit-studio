@@ -113,12 +113,12 @@
       if (f.dec && !/\.\d/.test(n.s)) continue;   // 결과지의 kg · % 는 늘 소수 한 자리 — 정수는 눈금 · 번호
       const hasDec = /\./.test(n.s); const dist = from ? Math.hypot(Math.max(0, w.b.x0 - from.x), Math.max(0, w.b.y0 - from.y)) / from.h : 0;
       let sc = wt / (1 + dist * 0.08) * (n.nodot ? 0.4 : n.tail ? 0.7 : n.alt ? 0.5 : 1) * (n.slash ? 3 : 1) * (f.dec ? (hasDec ? 1 : 0.2) : (hasDec ? 0.3 : 1));
-      c.push({ v: n.v, sc, b: w.b }); }
+      c.push({ v: n.v, sc, b: w.b, alt: !!(n.alt || n.nodot) }); }
     if (c.length >= 3) { const d = f.dec && c.some((x) => x.sc >= 0.5) ? c.filter((x) => x.sc >= 0.5) : c; d.sort((a, b) => b.b.x0 - a.b.x0); c = [{ ...d[0], sc: d[0].sc * 0.6, hist: 1 }]; }
     return { c, range };
   }
   // ③ 읽기: env.lines(라벨 읽기 결과) · env.num(rect) → 숫자 낱말(전체 좌표) · tpl(이 폰이 기억한 칸 위치, 0~1 비율)
-  async function read(env, tpl = {}) {
+  async function read(env, tpl = {}, opt = {}) {
     const { W, H } = env, C = {}, seen = {}, ranges = {};
     const add = (k, arr) => { for (const x of arr) { const key = k + ':' + x.v; if (seen[key]) { seen[key].sc += x.sc; seen[key].hist = seen[key].hist && x.hist; continue; } seen[key] = { ...x, hist: !!x.hist }; (C[k] = C[k] || []).push(seen[key]); } };
     // 이 폰이 기억한 칸 위치(사용자가 고친 값 · 누른 자리) — 가운데에 가까운 숫자일수록 높게
@@ -176,7 +176,7 @@
     const text = env.lines.map((L) => L.words.map((w) => w.t).join(' ')).join('\n');
     const sex = /여성|Female/i.test(text) ? 'f' : /남성|Male/i.test(text) ? 'm' : null;
     const model = (text.match(/InBody\s*-?\s*(\d{3}[A-Z]?)/i) || [])[1] || null;
-    const res = solve(C, { sex, model, ranges }); res.words = seenW; res.dbg = { A: A.map((a) => a.k + ":" + a.kw + "@" + a.b.x0 + "," + a.b.y0), C: Object.fromEntries(Object.entries(C).map(([k, v]) => [k, v.map((x) => x.v + "(" + x.sc.toFixed(1) + ")")])) }; return res;
+    const res = solve(C, { sex, model, ranges, height: opt.height }); res.words = seenW; res.dbg = { A: A.map((a) => a.k + ":" + a.kw + "@" + a.b.x0 + "," + a.b.y0), C: Object.fromEntries(Object.entries(C).map(([k, v]) => [k, v.map((x) => x.v + "(" + x.sc.toFixed(1) + ")")])) }; return res;
   }
   // ④ 서로 맞춰 보기: 제지방 = 체중 − 체지방 · 체지방률 = 체지방 ÷ 체중 · BMI = 체중 ÷ 키² · 기초대사 ≈ 370 + 21.6×제지방
   function solve(C, meta) {
@@ -221,13 +221,35 @@
       const cs = (C[k] || []).slice().sort((a, b) => b.sc - a.sc), me = cs.find((x) => x.v === out[k]);
       const other = cs.find((x) => x.v !== out[k] && Math.abs(x.v - out[k]) > 0.05 && me && x.sc >= me.sc * 0.5 && !x.alt);
       if (other && !doubt[k]) doubt[k] = `다른 후보 ${other.v}`; }
+    // QA 재반려 261030 — 체중이 틀리면 마법사 체중으로 들어가므로, 버려진 '읽은' BMI · 체지방률로도 체중을 검산한다
+    const CORE0 = ['weight', 'smm', 'bfm', 'pbf', 'bmi', 'bmr', 'ffm', 'score', 'ra', 'la', 'tr', 'rl', 'll'];
+    const R3 = (k) => how[k] === '읽음' && out[k] != null;
+    const verW = (R3('weight') && R3('bfm') && R3('ffm') && Math.abs(out.weight - out.bfm - out.ffm) <= 0.3) || (R3('weight') && R3('bfm') && R3('pbf') && Math.abs(out.bfm / out.weight * 100 - out.pbf) <= 0.4);   // 읽은 칸끼리 검산되는 체중
+    const rd = (k) => (C[k] || []).filter((x) => !x.alt && x.sc >= 0.4).sort((x, y) => y.sc - x.sc)[0];   // 버려진 후보 중 또렷한 것만(눈금 '150'→15.0 같은 건 빼고)
+    const flagW = (why) => { doubt.weight = doubt.weight || why; for (const k of Object.keys(how)) if (how[k] === '계산' && ['bfm', 'ffm', 'pbf', 'bmi', 'bmr'].includes(k)) doubt[k] = doubt[k] || '의심 체중으로 계산함'; };
+    { const rb = how.bmi === '읽음' ? { v: out.bmi } : rd('bmi'), h = out.height ?? meta.height;   // (가) 읽은 BMI(풀이에서 버려졌으면 가장 센 후보)
+      if (rb && out.weight != null && h && (!verW || how.bmi === '읽음') && Math.abs(out.weight / (h / 100) ** 2 - rb.v) > 0.3) { flagW(`BMI ${rb.v} 와 안 맞음`); doubt.bmi = doubt.bmi || `읽은 BMI ${rb.v}`; } }
+    { const rp = how.pbf === '읽음' ? { v: out.pbf } : null;   // (나) 읽은 체지방률이 있을 때만(버려진 약한 후보로 체중을 의심하지 않게)
+      if (rp && out.weight != null && out.bfm != null && Math.abs(out.bfm / out.weight * 100 - rp.v) > 0.5) { flagW(`체지방률 ${rp.v} 와 안 맞음`); doubt.bfm = doubt.bfm || '체지방률과 안 맞음'; doubt.pbf = doubt.pbf || '체지방량 ÷ 체중과 안 맞음'; } }
+    for (const k of CORE0) { const x = best && k in best ? best[k] : top(k, 1)[1]; if (x && how[k] === '읽음' && x.sc < 0.3 && !doubt[k] && !(verW && ['weight', 'bfm', 'ffm', 'pbf'].includes(k))) doubt[k] = '흐리게 읽음'; }   // 근거가 약한 값(370S −3° 체중 180)
+    for (const k of ['score', 'bmr']) if (out[k] != null && how[k] === '읽음' && !Number.isInteger(out[k])) doubt[k] = '소수점이 있음';   // (다)
+    for (const k of ['weight', 'smm', 'bfm', 'pbf', 'bmi', 'ffm']) if (out[k] != null && /\.\d{2,}/.test(String(out[k]))) doubt[k] = '소수가 결과지보다 김';
+    { const ff = out.ffm ?? (out.weight != null && out.bfm != null ? out.weight - out.bfm : null);   // (라) 제지방량 대비 부위 비율
+      const R = { ra: [3.5, 7], la: [3.5, 7], rl: [10, 18], ll: [10, 18], tr: [40, 55] };
+      if (ff) for (const [k, [lo, hi]] of Object.entries(R)) if (out[k] != null) { const pc = out[k] / ff * 100; if (pc < lo || pc > hi) doubt[k] = doubt[k] || `제지방량의 ${pc.toFixed(1)}%`; } }
+    if (out.weight != null && out.bfm != null && out.ffm != null && Math.abs(out.weight - out.bfm - out.ffm) > 0.3) flagW('체지방량 + 제지방량 과 안 맞음');   // (마)
+    { const h = out.height ?? meta.height; if (out.weight != null && h && (out.weight / (h / 100) ** 2 < 13 || out.weight / (h / 100) ** 2 > 50)) flagW(`키 ${h}cm 에 맞지 않는 체중`); }
     const okWFM = out.weight != null && out.bfm != null && out.ffm != null && Math.abs(out.weight - out.bfm - out.ffm) <= 0.3;
     const verified = { weight: okWFM, bfm: okWFM, ffm: okWFM, pbf: out.pbf != null && out.bfm != null && out.weight != null && Math.abs(out.bfm / out.weight * 100 - out.pbf) <= 0.4, smm: false };   // 검산되면 이력 값이어도 믿는다
     for (const k of ['weight', 'smm', 'bfm', 'pbf', 'ffm']) { const x = best && best[k]; if (x && x.hist && !verified[k] && !doubt[k]) doubt[k] = '신체변화 그래프 값 — 결과지와 확인'; }
     if (out.bmi != null && out.weight != null && out.height == null) { const ih = Math.sqrt(out.weight / out.bmi) * 100; if (ih < 140 || ih > 210) doubt.bmi = doubt.bmi || `키 ${Math.round(ih)}cm 가 되는 값 — 확인`; }   // 키를 못 읽어도   // (마) 막대 옆 값을 못 읽고 이력 끝 값만 읽었을 때
     if (how.bmr === '계산' && !doubt.bmr) doubt.bmr = '계산값 — 결과지에 있으면 확인';
     if (['weight', 'bfm', 'ffm'].some((k) => doubt[k] && out[k] != null)) for (const k of Object.keys(how)) if (how[k] === '계산' && !doubt[k]) doubt[k] = '의심 칸으로 계산함';   // (나) 그 값으로 계산한 칸도
-    return { v: out, how, box, doubt, sex: meta.sex, model: meta.model, ranges: meta.ranges };
+    for (const k of Object.keys(how)) if (how[k] === '계산' && !doubt[k]) doubt[k] = '계산값 — 결과지에 있으면 확인';   // 결과지 반올림과 0.1 다를 수 있고, 틀린 칸에서 나왔을 수 있다
+    const CORE = ['weight', 'smm', 'bfm', 'pbf', 'bmi', 'bmr', 'ffm', 'score', 'ra', 'la', 'tr', 'rl', 'll'];
+    const weak = out.weight == null || !!doubt.weight || CORE.filter((k) => out[k] != null && doubt[k] && how[k] === '읽음').length >= 4;   // 체중은 모든 검산의 기준 — 체중이 비거나 의심이면 전부 확인   // 못 읽은 빈칸 · 계산값은 세지 않는다(정직한 빈칸)   // 의심 칸이 많으면 사진이 기울었거나 흐린 것 — 맞아 보이는 칸도 믿지 않는다
+    if (weak) for (const k of CORE) if (out[k] != null && !doubt[k]) doubt[k] = '읽기 상태가 나빠 확인 필요';
+    return { v: out, how, box, doubt, weak, sex: meta.sex, model: meta.model, ranges: meta.ranges };
   }
   function locate(words, v, dec) {   // 고친 값이 읽은 낱말 가운데 있으면 그 자리
     const want = dec ? Number(v).toFixed(String(v).split('.')[1]?.length || 1) : String(Math.round(v));
