@@ -146,6 +146,9 @@ function ibDone() { if (IBX && IBX.N) IBX.N.terminate().catch(() => {}); IBX = n
 function ibConfirm(res) {
   const v = $('#view'), F = INB.F, wiz = IBX && IBX.mode === 'wizard', p = S.profile || {};
   IBX = IBX || { mode: 'add' }; IBX.res = res; IBX.loc = IBX.loc || {};
+  res.doubt = res.doubt || {};
+  { const h = res.v.height ?? p.height, w = res.v.weight, b = res.v.bmi;   // (가) 결과지에서 키를 못 읽었으면 내 정보의 키로
+    if (h && w != null && b != null && Math.abs(w / (h / 100) ** 2 - b) > 0.3 && !res.doubt.bmi) res.doubt.bmi = '체중 ÷ 키² 와 안 맞음'; }
   const val = (k) => res.v[k] ?? '';
   const row = (k) => { const f = F[k], dz = res.doubt && res.doubt[k], how = res.how && res.how[k];
     return `<div class="ibrow${dz ? ' doubt' : ''}" data-k="${k}"><label>${esc(f.name)}${f.unit ? ` <span class="hint">${esc(f.unit)}</span>` : ''}${how === '계산' ? ' <span class="badge">계산</span>' : ''}${dz ? ` <span class="hint">${esc(dz)}</span>` : ''}</label>
@@ -178,9 +181,16 @@ function ibConfirm(res) {
         $('#ibMif').onclick = (e) => { const b = e.target.closest('button'); if (b) { pickMif = b.dataset.v === '1'; check(); } }; return; } }
     pickMif = false; w.textContent = msg.join(' · ');
   }
-  v.querySelectorAll('[data-ib]').forEach((el) => el.addEventListener('input', () => { el.closest('.ibrow').classList.remove('doubt'); check(); }));
-  if (wiz) ['#ibH', '#ibA'].forEach((s) => $(s).addEventListener('input', check));
-  check();
+  function bmiCheck() {   // (가) 키를 넣거나 고칠 때마다 BMI 가 체중 ÷ 키² 와 맞는지
+    const q = prof(), row = v.querySelector('.ibrow[data-k=bmi]'), b = num('bmi'), w = num('weight'); if (!row) return;
+    const bad = q.height > 100 && w != null && b != null && Math.abs(w / (q.height / 100) ** 2 - b) > 0.3;
+    row.classList.toggle('doubt', bad || (!!res.doubt.bmi && !row.dataset.touched && !(q.height > 100 && w != null && b != null)));
+    let t = row.querySelector('.bmiwarn'); if (!t) { t = document.createElement('span'); t.className = 'hint bmiwarn'; row.querySelector('label').appendChild(t); }
+    t.textContent = bad ? ` 체중 ÷ 키² = ${(w / (q.height / 100) ** 2).toFixed(1)}` : '';
+  }
+  v.querySelectorAll('[data-ib]').forEach((el) => el.addEventListener('input', () => { const r = el.closest('.ibrow'); r.dataset.touched = 1; r.classList.remove('doubt'); check(); bmiCheck(); }));
+  if (wiz) ['#ibH', '#ibA'].forEach((s) => $(s).addEventListener('input', () => { check(); bmiCheck(); }));
+  check(); bmiCheck();
   v.querySelectorAll('[data-loc]').forEach((b) => b.onclick = () => ibLocate(b.dataset.loc));
   $('#ibCancel').onclick = () => { ibDone(); render(); };
   $('#ibSave').onclick = () => {

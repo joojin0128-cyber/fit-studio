@@ -114,13 +114,13 @@
       const hasDec = /\./.test(n.s); const dist = from ? Math.hypot(Math.max(0, w.b.x0 - from.x), Math.max(0, w.b.y0 - from.y)) / from.h : 0;
       let sc = wt / (1 + dist * 0.08) * (n.nodot ? 0.4 : n.tail ? 0.7 : n.alt ? 0.5 : 1) * (n.slash ? 3 : 1) * (f.dec ? (hasDec ? 1 : 0.2) : (hasDec ? 0.3 : 1));
       c.push({ v: n.v, sc, b: w.b }); }
-    if (c.length >= 3) { const d = f.dec && c.some((x) => x.sc >= 0.5) ? c.filter((x) => x.sc >= 0.5) : c; d.sort((a, b) => b.b.x0 - a.b.x0); c = [{ ...d[0], sc: d[0].sc * 0.6 }]; }
+    if (c.length >= 3) { const d = f.dec && c.some((x) => x.sc >= 0.5) ? c.filter((x) => x.sc >= 0.5) : c; d.sort((a, b) => b.b.x0 - a.b.x0); c = [{ ...d[0], sc: d[0].sc * 0.6, hist: 1 }]; }
     return { c, range };
   }
   // ③ 읽기: env.lines(라벨 읽기 결과) · env.num(rect) → 숫자 낱말(전체 좌표) · tpl(이 폰이 기억한 칸 위치, 0~1 비율)
   async function read(env, tpl = {}) {
     const { W, H } = env, C = {}, seen = {}, ranges = {};
-    const add = (k, arr) => { for (const x of arr) { const key = k + ':' + x.v; if (seen[key]) { seen[key].sc += x.sc; continue; } seen[key] = { ...x }; (C[k] = C[k] || []).push(seen[key]); } };
+    const add = (k, arr) => { for (const x of arr) { const key = k + ':' + x.v; if (seen[key]) { seen[key].sc += x.sc; seen[key].hist = seen[key].hist && x.hist; continue; } seen[key] = { ...x, hist: !!x.hist }; (C[k] = C[k] || []).push(seen[key]); } };
     // 이 폰이 기억한 칸 위치(사용자가 고친 값 · 누른 자리) — 가운데에 가까운 숫자일수록 높게
     const tplRead = async () => { for (const [k, r] of Object.entries(tpl)) { if (!F[k]) continue;
       const cx = (r.x0 + r.x1) / 2 * W, cy = (r.y0 + r.y1) / 2 * H, rh = Math.max(12, (r.y1 - r.y0) * H);
@@ -145,7 +145,8 @@
       if (ax.length) { await maskAxis(ax); ws = await env.num(R); } return [...inR(R), ...ws]; };
     await tplRead();
     for (const a of A) { const f = F[a.k], h = a.h;
-      const right = clampR({ x0: a.b.x1 + 0.2 * h, y0: a.b.y0 - Math.max((f.seg ? 2 : 0.6) * h, 0.012 * H), x1: a.b.x1 + (f.seg ? 0.45 : 0.6) * W, y1: a.b.y1 + 1.0 * h }, W, H);
+      const up = f.seg && /^[A-Za-z]/.test(a.kw) ? 2 : 0.6;   // 970S 영문 부위 라벨은 값보다 한 줄 아래 — 한글 라벨은 같은 줄(윗줄 값을 집으면 한 칸씩 밀린다)
+      const right = clampR({ x0: a.b.x1 + 0.2 * h, y0: a.b.y0 - Math.max(up * h, 0.012 * H), x1: a.b.x1 + (f.seg ? 0.45 : 0.6) * W, y1: a.b.y1 + 1.0 * h }, W, H);
       const below = clampR({ x0: a.b.x0 - 1.5 * h, y0: a.b.y1, x1: a.b.x1 + (f.person ? 1.5 : a.k === 'score' ? 9 : 4) * h, y1: a.b.y1 + (f.person ? 2 : a.k === 'score' ? 4.5 : 3) * h }, W, H);
       let r1 = { c: [] };
       if (!f.person) { const wr = await both(right); r1 = pick(f, wr, 1.2, { x: a.b.x1, y: a.b.y0, h }); if (!r1.c.length && !f.person) { for (let y = right.y0; y < right.y1 - 0.8 * h; y += 0.9 * h) { const st = clampR({ x0: right.x0, y0: y, x1: right.x1, y1: y + 1.7 * h }, W, H); const rs = pick(f, await env.num(st, 'line'), 1, { x: a.b.x1, y: a.b.y0, h }); if (rs.c.length) { r1 = rs; break; } } }
@@ -208,6 +209,24 @@
     if (out.weight != null && out.bfm != null && out.ffm != null && Math.abs(out.weight - out.bfm - out.ffm) > 0.3) doubt.ffm = doubt.bfm = '체중−체지방≠제지방';
     if (out.bmr != null && out.ffm != null && Math.abs(out.bmr - (370 + 21.6 * out.ffm)) > 60 && how.bmr === '읽음') doubt.bmr = '제지방량과 안 맞음';
     if (out.smm != null && out.weight != null && out.smm > out.weight * 0.65) doubt.smm = '너무 큼';
+    // QA 261030 반려: 틀린 숫자가 '보통'으로 계산에 들어가지 않게 — 서로 안 맞으면 노랗게
+    if (out.bmi != null && out.weight != null && out.height != null && Math.abs(out.weight / (out.height / 100) ** 2 - out.bmi) > 0.3) doubt.bmi = '체중 ÷ 키² 와 안 맞음';   // (가)
+    if (out.bmr != null && out.ffm != null && Math.abs(out.bmr - (370 + 21.6 * out.ffm)) > 60) { doubt.bmr = doubt.bmr || '제지방량과 안 맞음'; doubt.ffm = doubt.ffm || '기초대사량과 안 맞음'; }   // (나)
+    if (out.pbf != null && out.pbf < 5) doubt.pbf = '너무 낮음';   // (다)
+    if (out.ffm != null && out.weight != null && out.ffm / out.weight > 0.92) doubt.ffm = '체중에 비해 너무 큼';
+    { const arm = [out.ra, out.la].filter((x) => x != null), leg = [out.rl, out.ll].filter((x) => x != null), tr = out.tr;   // (라) 몸통 > 다리 > 팔
+      const bad = (tr != null && leg.some((x) => x * 1.4 > tr)) || (tr != null && arm.some((x) => x * 2.5 > tr)) || arm.some((a) => leg.some((l) => a > l * 0.7));
+      if (bad) for (const k of ['ra', 'la', 'tr', 'rl', 'll']) if (out[k] != null) doubt[k] = '몸통 > 다리 > 팔 이 아님'; }
+    for (const k of ['weight', 'smm', 'bfm', 'pbf', 'ffm', 'bmr']) if (out[k] != null && how[k] === '읽음') {   // (마) 같은 칸에 다른 숫자 후보가 비슷하게 있으면(막대 옆 값 ≠ 이력 끝 값)
+      const cs = (C[k] || []).slice().sort((a, b) => b.sc - a.sc), me = cs.find((x) => x.v === out[k]);
+      const other = cs.find((x) => x.v !== out[k] && Math.abs(x.v - out[k]) > 0.05 && me && x.sc >= me.sc * 0.5 && !x.alt);
+      if (other && !doubt[k]) doubt[k] = `다른 후보 ${other.v}`; }
+    const okWFM = out.weight != null && out.bfm != null && out.ffm != null && Math.abs(out.weight - out.bfm - out.ffm) <= 0.3;
+    const verified = { weight: okWFM, bfm: okWFM, ffm: okWFM, pbf: out.pbf != null && out.bfm != null && out.weight != null && Math.abs(out.bfm / out.weight * 100 - out.pbf) <= 0.4, smm: false };   // 검산되면 이력 값이어도 믿는다
+    for (const k of ['weight', 'smm', 'bfm', 'pbf', 'ffm']) { const x = best && best[k]; if (x && x.hist && !verified[k] && !doubt[k]) doubt[k] = '신체변화 그래프 값 — 결과지와 확인'; }
+    if (out.bmi != null && out.weight != null && out.height == null) { const ih = Math.sqrt(out.weight / out.bmi) * 100; if (ih < 140 || ih > 210) doubt.bmi = doubt.bmi || `키 ${Math.round(ih)}cm 가 되는 값 — 확인`; }   // 키를 못 읽어도   // (마) 막대 옆 값을 못 읽고 이력 끝 값만 읽었을 때
+    if (how.bmr === '계산' && !doubt.bmr) doubt.bmr = '계산값 — 결과지에 있으면 확인';
+    if (['weight', 'bfm', 'ffm'].some((k) => doubt[k] && out[k] != null)) for (const k of Object.keys(how)) if (how[k] === '계산' && !doubt[k]) doubt[k] = '의심 칸으로 계산함';   // (나) 그 값으로 계산한 칸도
     return { v: out, how, box, doubt, sex: meta.sex, model: meta.model, ranges: meta.ranges };
   }
   function locate(words, v, dec) {   // 고친 값이 읽은 낱말 가운데 있으면 그 자리
