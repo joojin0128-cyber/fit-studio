@@ -18,7 +18,7 @@ function theme() { const t = S.theme || 'auto'; if (t === 'auto') document.docum
 const N = () => ENG.numbers(D.rules, S.profile, lastIb());
 const BO = () => ENG.boosts(D.rules, lastIb());   // 부위 보강(가장 최근 인바디 — 다음 인바디에서 풀리면 빠진다)
 const exName = (id) => D.exById[id]?.name || id;
-const repTxt = (r) => r.sec ? `${r.lo}초` : r.lo === r.hi ? `${r.lo}회` : `${r.lo}–${r.hi}회`;
+const repTxt = (r) => r.sec ? `${r.lo}${r.hi !== r.lo ? `–${r.hi}` : ""}초` : r.lo === r.hi ? `${r.lo}회` : `${r.lo}–${r.hi}회`;
 
 function render() {
   theme();
@@ -39,7 +39,7 @@ function wizard(v, edit = false) {
    <div class="grid2"><div><label>키(cm)</label><input id="wH" inputmode="decimal" value="${esc(p.height)}"></div><div><label>체중(kg)</label><input id="wW" inputmode="decimal" value="${esc(p.weight)}"></div></div>
    <div class="grid2"><div><label>나이</label><input id="wA" inputmode="numeric" value="${esc(p.age)}"></div><div><label>성별</label>${chip('sex', p.sex, [['m', '남'], ['f', '여']])}</div></div>
    <label>운동 경험</label>${chip('exp', p.exp, [['처음', '처음'], ['조금', '조금'], ['자세 앎', '자세 앎']])}
-   <label>목표</label>${chip('goal', p.goal, [['근육', '근육'], ['탄탄(유지)', '탄탄(유지)'], ['체지방 감량', '체지방 감량']])}
+   <label>목표</label>${chip('goal', p.belly ? '뱃살' : p.goal, [['근육', '근육'], ['탄탄(유지)', '탄탄(유지)'], ['체지방 감량', '체지방 감량'], ['뱃살', '체지방 감량(뱃살)']])}<p class="hint" id="wBelly"></p>
    <label>일주일에 몇 번</label>${chip('freq', p.freq, [[2, '2번'], [3, '3번'], [4, '4번'], [5, '5번']])}
    <label>한 번에 몇 분</label>${chip('minutes', p.minutes, [[30, '30분'], [45, '45분'], [60, '60분']])}
    <label>집중 부위</label>${chip('focus', p.focus, [['상체 실루엣', '상체 실루엣'], ['균형', '균형'], ['복부·코어', '복부·코어']])}
@@ -47,8 +47,8 @@ function wizard(v, edit = false) {
    <p id="wBmi" class="muted"></p><p id="wWarn" class="hint"></p><div id="wSug"></div>
    <button class="primary big" id="wGo">${edit ? '저장하고 프로그램 다시 짜기' : '내 프로그램 만들기'}</button>
    ${edit ? '<button class="ghost big" id="wBack">취소</button>' : ''}<p class="hint">${esc(D.rules.disclaimer)}</p></div>`;
-  const st = { ...p, noWeigh: p.noWeigh ? 1 : 0 };
-  const warn = () => { $('#wWarn').textContent = st.exp === '처음' && +st.freq === 5 ? '처음이면 주 4회로 시작하는 걸 권해요' : ''; sugg(); };
+  const st = { ...p, goal: p.belly ? '뱃살' : p.goal, noWeigh: p.noWeigh ? 1 : 0 };
+  const warn = () => { if ($('#wBelly')) $('#wBelly').textContent = st.goal === '뱃살' ? '하루 300~400kcal 덜 · 단백질 그대로 · 매일 걷기 8,000보 · 주 1회 허리둘레 — 배는 복근 운동만으로 안 빠지고 전체 체지방이 빠져야 줄어들어요' : ''; $('#wWarn').textContent = st.exp === '처음' && +st.freq === 5 ? '처음이면 주 4회로 시작하는 걸 권해요' : ''; sugg(); };
   function sugg() {   // 인바디로 시작했으면 목표 제안(제안만 — 눌러야 고른다)
     const ib = lastIb(), box = $('#wSug'); if (!box || !ib || S.profile) return;
     const h = parseFloat($('#wH').value), sg = h > 100 ? ENG.suggestGoal(D.rules, { height: h, sex: st.sex }, ib) : null;
@@ -61,8 +61,8 @@ function wizard(v, edit = false) {
   $('#wGo').onclick = () => {
     const h = parseFloat($('#wH').value), w = parseFloat($('#wW').value), a = parseInt($('#wA').value, 10);
     if (!(h > 100 && h < 230 && w > 25 && w < 250 && a >= 14 && a < 100)) { alert('키(cm) · 체중(kg) · 나이를 숫자로 넣어 주세요'); return; }
-    const np = { height: h, weight: w, age: a, sex: st.sex, exp: st.exp, goal: st.goal, freq: +st.freq, minutes: +st.minutes, focus: st.focus, noWeigh: !!+st.noWeigh };
-    const changed = !S.profile || ['exp', 'goal', 'freq', 'minutes', 'focus'].some((k) => S.profile[k] !== np[k]);
+    const np = { height: h, weight: w, age: a, sex: st.sex, exp: st.exp, goal: st.goal === '뱃살' ? '체지방 감량' : st.goal, belly: st.goal === '뱃살', freq: +st.freq, minutes: +st.minutes, focus: st.focus, noWeigh: !!+st.noWeigh };
+    const changed = !S.profile || ['exp', 'goal', 'freq', 'minutes', 'focus'].some((k) => S.profile[k] !== np[k]); if (S.profile) { np.preset = S.profile.preset; }
     S.profile = np; if (changed) { S.planStart = ymd(); S.done = 0; S.cur = null; S.swaps = {}; }
     if (!np.noWeigh && (!S.body.length || S.body[S.body.length - 1].w !== w)) { S.body = S.body.filter((b) => b.date !== ymd()); S.body.push({ date: ymd(), w }); }
     IBX = null; wizManual = false; save(); tab = 'today'; render();
@@ -85,7 +85,7 @@ function startChoice(v) {
 function curDay(date) {
   const key = S.cur && S.cur.date === date ? S.cur.key : ENG.nextKey(D, S.profile, S.done);
   const fm = foodDayMods(date), dl = ENG.deloadNow(S, date);
-  const day = ENG.buildDay(D, S.profile, key, { swaps: S.swaps[key], deload: dl, easy: fm.easy && !dl, boost: BO() });   // 어제 술 → '가볍게 할게'를 눌렀을 때만 세트 −1 · RIR +1
+  const day = ENG.buildDay(D, S.profile, key, { swaps: S.swaps[key], deload: dl, easy: fm.easy && !dl, boost: BO(), week: planWeek(date) });   // 어제 술 → '가볍게 할게'를 눌렀을 때만 세트 −1 · RIR +1
   day.easy = fm.easy && !dl; day.cardio.food = fm.walk; return day;
 }
 function startCur(day, date) {
@@ -104,12 +104,13 @@ function lastOf(id) { for (let i = S.sessions.length - 1; i >= 0; i--) { const s
 
 const hasData = (C) => C && (Object.values(C.sets).some((a) => a.some((x) => x.done)) || C.cardio.done || C.cardio.sec > 60);
 const extraTrain = () => [...new Set([...S.sessions.map((s) => s.date), S.cur && !S.cur.finished && hasData(S.cur) ? S.cur.date : null].filter(Boolean))];
+const planWeek = (date) => (S.profile && S.profile.preset ? Math.max(0, Math.floor((new Date(date + 'T12:00') - new Date((S.planStart || date) + 'T12:00')) / 864e5 / 7)) : 0);   // 전신 밀기 · 당기기 몇 주째(0부터)
 const today0 = () => (new Date().getHours() < 5 ? addDays(ymd(), -1) : ymd());   // 하루 경계는 새벽 5시(QA 261030 — 00:30 야식 · 자정 넘은 술은 전날)
 function carryOver() {   // QA 261030 ①: 자정을 넘겨도 기록이 사라지지 않게 — 시작 6시간 안이면 이어 가고, 넘으면 체크한 세트를 그날 기록으로 저장
   const C = S.cur; if (!C || C.date === today0()) return today0();
   if (C.finished) { if (Date.now() - (C.startedAt || 0) < 6 * 3600e3) return C.date; S.cur = null; save(); return today0(); }   // 재QA 261030: 끝낸 운동은 (6시간 지나면) 다음 날 새 카드로
   if (Date.now() - (C.startedAt || 0) < 6 * 3600e3) return C.date;
-  if (hasData(C)) saveSession(ENG.buildDay(D, S.profile, C.key, { swaps: S.swaps[C.key], deload: ENG.deloadNow(S, C.date), boost: BO() }));
+  if (hasData(C)) saveSession(ENG.buildDay(D, S.profile, C.key, { swaps: S.swaps[C.key], deload: ENG.deloadNow(S, C.date), boost: BO(), week: planWeek(C.date) }));
   S.cur = null; save(); return today0();
 }
 function today(v) {
@@ -118,14 +119,15 @@ function today(v) {
   const day = curDay(date), started = S.cur && S.cur.date === date;
   let work;
   if (started && S.cur.finished) work = `<div class="card"><h2>오늘 운동 끝 👏</h2><p>${esc(day.name)} · 기록 저장됨</p><button id="reopen">기록 고치기</button></div>`;
-  else if (!started && !train) work = `<div class="card"><h2>오늘은 쉬는 날</h2><p>${esc(D.rules.cardio[p.goal].rest_day)}</p><p class="hint">다음 순서: ${esc(day.name)}</p><button class="big" id="anyway">그래도 운동하기</button></div>`;
+  else if (!started && !train) work = (() => { const PR = p.preset && D.programs.presets && D.programs.presets[p.preset], walk = PR && (PR.walk_days || []).includes(new Date(date + 'T12:00').getDay());
+    return `<div class="card"><h2>${walk ? '오늘은 걷기 날 🚶' : '오늘은 쉬는 날'}</h2><p>${esc(PR ? (walk ? PR.cardio.rest_day : '푹 쉬기 — 가벼운 산책은 좋아요') : D.rules.cardio[p.goal].rest_day)}</p><p class="hint">다음 순서: ${esc(day.name)}</p><button class="big" id="anyway">그래도 운동하기</button></div>`; })();
   else work = workoutCard(day, started);
   const meals = ENG.planWeekMeals(D, p, n, S.diet, date, extraTrain())[date], eaten = S.diet.eaten[date] || {};
   const flog = S.food.log[date] || [];   // 먹은 것을 기록했으면 그 합계 · 아니면 체크한 식단
   const got = flog.length ? Math.round(ENG.foodTotals(flog).protein) : Object.entries(meals).reduce((a, [sl, id]) => a + (eaten[sl] && D.mealById[id] ? D.mealById[id].protein_g : 0), 0);
   const kc = train ? n.kcal : n.restKcal;
   const backup = S.sessions.length >= 3 && (!S.lastExport || (Date.now() - S.lastExport) > 14 * 864e5);      // QA 참고 ③
-  v.innerHTML = `${drinkCard(date)}${backup ? '<div class="card"><p class="small">기록은 이 폰 안에만 있어요 — 가끔 백업해 두세요</p><button id="bk">지금 백업(JSON 내보내기)</button></div>' : ''}${work}
+  v.innerHTML = `${drinkCard(date)}${planCards(date)}${backup ? '<div class="card"><p class="small">기록은 이 폰 안에만 있어요 — 가끔 백업해 두세요</p><button id="bk">지금 백업(JSON 내보내기)</button></div>' : ''}${work}
    <div class="card" id="dietCard"><h2>오늘 식단 <span class="muted small">${train ? '운동일' : '쉬는 날'}</span></h2>
     <div class="row" style="justify-content:space-between;align-items:baseline"><b style="font-size:30px">${got}<span class="muted" style="font-size:18px"> / ${n.protein}g 단백질</span></b></div>
     <div class="prog" style="height:16px"><i style="width:${Math.min(100, Math.round(got / n.protein * 100))}%"></i></div>
@@ -135,7 +137,7 @@ function today(v) {
   v.querySelectorAll('#dietCard .check').forEach((el) => el.onclick = () => { const sl = el.dataset.sl; S.diet.eaten[date] = { ...eaten, [sl]: !eaten[sl] }; save(); render(); });
   $('#toDiet').onclick = () => { tab = 'diet'; render(); };
   $('#toFood').onclick = () => { tab = 'diet'; render(); window.scrollTo(0, 0); setTimeout(() => $('#fQ') && $('#fQ').focus(), 50); };
-  bindDrink(v, date);
+  bindDrink(v, date); bindPlan(v, date);
   if ($('#bk')) $('#bk').onclick = exportJson;
   if ($('#anyway')) $('#anyway').onclick = () => { audioPrime(); startCur(day, date); render(); };
   if ($('#reopen')) $('#reopen').onclick = () => { S.cur.finished = false; S.done = Math.max(0, S.done - 1); S.sessions = S.sessions.filter((s) => !(s.date === date && s.key === S.cur.key)); save(); render(); };
@@ -157,12 +159,13 @@ function workoutCard(day, started) {
   };
   const mm = C ? Math.floor(C.cardio.sec / 60) : 0, ss = C ? C.cardio.sec % 60 : 0;
   return `<div class="card"><h2>오늘 운동 · ${esc(day.name)}${day.easy ? ' <span class="badge">🍺 가볍게 · 세트 −1 · RIR +1</span>' : day.deload ? ' <span class="badge">디로드 주</span>' : ''}</h2>
-   ${C ? progressBar() : `<p class="hint">준비 5분 → 근력 ${day.items.length}개 → 유산소 ${day.cardio.minutes}분${day.cardio.food ? ` + 🚶 걷기 ${day.cardio.food}분(선택)` : ''} → 정리</p><button class="primary big" id="start">시작</button>`}
+   ${C ? progressBar() : `<p class="hint">준비 5분 → 근력 ${day.items.filter((i) => !i.core).length}개${day.items.some((i) => i.core) ? ' → 복근 · 코어 10분' : ''} → ${esc(day.cardio.type)} ${day.cardio.minutes}분${day.cardio.food ? ` + 🚶 걷기 ${day.cardio.food}분(선택)` : ''} → 정리</p><button class="primary big" id="start">시작</button>`}
    ${C ? `<h3>1. 준비운동</h3>${list(day.warmup, 'warm')}
-   <h3>2. 근력</h3>${day.items.map(exCard).join('')}
-   <h3>3. 유산소 · ${esc(day.cardio.type)} ${day.cardio.minutes}분${day.cardio.extra ? `(+${day.cardio.extra}분 가능하면)` : ''}${day.cardio.food ? ` <span class="badge">🚶 걷기 +${day.cardio.food}분(선택)</span>` : ''}</h3><p class="hint">${esc(day.cardio.detail)}</p>
+   <h3>2. 근력${day.preset ? ' <span class="hint">쉬기 60~90초</span>' : ''}</h3>${day.items.filter((i) => !i.core).map(exCard).join('')}
+   ${day.items.some((i) => i.core) ? `<h3>3. 복근 · 코어 10분 <span class="hint">쉬기 30초 · 처음 2주는 2세트</span></h3>${day.items.filter((i) => i.core).map(exCard).join('')}` : ''}
+   <h3>${day.items.some((i) => i.core) ? 4 : 3}. 유산소 · ${esc(day.cardio.type)} ${day.cardio.minutes}분${day.cardio.extra ? `(+${day.cardio.extra}분 가능하면)` : ''}${day.cardio.food ? ` <span class="badge">🚶 걷기 +${day.cardio.food}분(선택)</span>` : ''}</h3><p class="hint">${esc(day.cardio.detail)}</p>
    <div class="row"><b style="font-size:28px;font-variant-numeric:tabular-nums" id="cTime">${String(mm).padStart(2, '0')}:${String(ss).padStart(2, '0')}</b><button id="cGo" class="primary">${cardioRun ? '멈춤' : '시작'}</button><button id="cDone" class="${C.cardio.done ? 'primary' : ''}">${C.cardio.done ? '✓ 했어요' : '했어요'}</button></div>
-   <h3>4. 정리 스트레칭</h3>${list(day.cooldown, 'cool')}
+   <h3>${day.items.some((i) => i.core) ? 5 : 4}. 정리 스트레칭</h3>${list(day.cooldown, 'cool')}
    <div class="check" id="tired"><span class="box ${C.tired ? 'done' : ''}">${C.tired ? '✓' : ''}</span><span>오늘 피곤했어요 <span class="hint">(한 주 3번이면 다음 주 디로드)</span></span></div>
    <button class="primary big" id="fin">운동 끝 — 기록 저장</button>` : `<p class="small muted">${day.items.map((it) => esc(exName(it.id))).join(' · ')}</p>`}</div>`;
 }
@@ -285,6 +288,7 @@ function log(v) {
   v.innerHTML = `<div class="card"><h2>한눈에 보기</h2><div class="chips" id="per">${[['1m', '1개월'], ['3m', '3개월'], ['all', '전체']].map(([k, t]) => `<button data-v="${k}" class="${period === k ? 'on' : ''}">${t}</button>`).join('')}</div></div>
    <div class="card"><h2>${p.noWeigh ? '허리둘레' : '체중'} <span class="hint">주간 평균 · ${esc(diffTxt)}</span></h2>${few(wb) ? need : svgChart(wb, { unit })}
      <div class="row"><input id="bW" inputmode="decimal" placeholder="오늘 ${p.noWeigh ? '허리둘레(cm)' : '체중(kg)'}" style="flex:1"><button class="primary" id="bAdd">기록</button></div></div>
+   ${p.belly && !p.noWeigh ? `<div class="card"><h2>허리둘레 <span class="hint">주 1회 · 배꼽 높이${S.waist.length > 1 ? ` · 처음 대비 ${(S.waist[S.waist.length - 1].w - S.waist[0].w >= 0 ? '+' : '')}${Math.round((S.waist[S.waist.length - 1].w - S.waist[0].w) * 10) / 10}cm` : ''}</span></h2>${S.waist.filter((x) => x.date >= from).length < 2 ? '<p class="hint">2주 쌓이면 보여요 — 오늘 화면에서 주 1회 기록</p>' : svgChart(S.waist.filter((x) => x.date >= from).map((x) => ({ x: x.date, y: x.w })), { unit: 'cm' })}</div>` : ''}
    ${ibCards(from)}
    ${p.noWeigh ? '' : `<div class="card"><h2>BMI</h2>${few(bmiPts) ? need : svgChart(bmiPts, { unit: '' })}</div>`}
    <div class="card"><h2>주간 운동 <span class="hint">목표 주 ${p.freq}회</span></h2>${weeks.length < 2 && span < 14 ? need : svgBars(wkCount, { goal: p.freq, unit: '회' })}</div>
@@ -380,7 +384,8 @@ function settings(v) {
        ${ENG.boosts(D.rules, ib).map((b) => `<p class="hint">💪 ${esc(exName(b.ex))} ${b.sets}×${esc(b.reps)} — ${esc(b.why)}</p>`).join('')}
        ${S.inbody.map((x, i) => [x, i]).reverse().map(([x, i]) => `<div class="row" style="justify-content:space-between"><span class="small">${md(x.date)} · 체중 ${x.v.weight}kg · 골격근 ${x.v.smm ?? '–'} · 체지방률 ${x.v.pbf ?? '–'}</span><button class="small danger" data-ibdel="${i}">지우기</button></div>`).join('')}`; })()}
     <button class="big" id="sIb">인바디 넣기(사진)</button>${Object.keys(S.ibTpl['기본'] || {}).length ? `<p class="hint">기억한 칸 위치 ${Object.keys(S.ibTpl['기본']).length}칸 <button class="small ghost" id="sTplX">잊기</button></p>` : ''}</div>
-   <div class="card"><h2>내 순서 <span class="hint">놓친 날은 메꾸지 않고 다음 순서부터</span></h2>${[...new Set(seq)].map((k) => { const d = ENG.buildDay(D, p, k, { swaps: S.swaps[k], boost: BO() }); return `<p class="small"><b>${esc(d.name)}</b> — ${d.items.map((it) => esc(exName(it.id))).join(' · ')}</p>`; }).join('')}
+   ${planSettings()}
+   <div class="card"><h2>내 순서 <span class="hint">놓친 날은 메꾸지 않고 다음 순서부터</span></h2>${[...new Set(seq)].map((k) => { const d = ENG.buildDay(D, p, k, { swaps: S.swaps[k], boost: BO(), week: planWeek(today0()) }); return `<p class="small"><b>${esc(d.name)}</b> — ${d.items.map((it) => esc(exName(it.id))).join(' · ')}</p>`; }).join('')}
     <label>디로드 주기</label><div class="chips" id="sDel">${[4, 5, 6].map((w) => `<button data-v="${w}" class="${S.deloadEvery === w ? 'on' : ''}">${w}주마다</button>`).join('')}</div></div>
    <div class="card"><h2>한눈에 보기 운동 3개</h2>${[0, 1, 2].map((i) => `<select data-ke="${i}">${D.exercises.exercises.filter((e) => e.equipment !== '맨몸').map((e) => `<option value="${e.id}" ${S.keyEx[i] === e.id ? 'selected' : ''}>${esc(e.name)}</option>`).join('')}</select>`).join('')}</div>
    <div class="card"><h2>화면</h2><div class="chips" id="sTheme">${[['auto', '폰 설정 따라'], ['light', '밝게'], ['dark', '어둡게']].map(([k, t]) => `<button data-v="${k}" class="${(S.theme || 'auto') === k ? 'on' : ''}">${t}</button>`).join('')}</div></div>
@@ -390,6 +395,7 @@ function settings(v) {
     <div class="row"><button id="sOut">JSON 내보내기</button><button id="sIn">JSON 불러오기</button><input type="file" id="sFile" accept=".json,application/json" hidden></div></div>
    <div class="card"><p class="hint">${esc(D.rules.disclaimer)}</p><button class="big danger" id="sWipe">전부 지우기</button></div>`;
   $('#sEdit').onclick = () => wizard($('#view'), true);
+  bindPlanSettings();
   $('#sIb').onclick = () => ibStart('add');
   if ($('#sGoal')) $('#sGoal').onclick = (e) => { S.profile.goal = e.target.dataset.g; S.planStart = ymd(); S.done = 0; S.cur = null; S.swaps = {}; save(); render(); };
   if ($('#sTplX')) $('#sTplX').onclick = () => { if (confirm('기억한 칸 위치를 잊을까요? 다음 사진부터 처음처럼 읽어요')) { S.ibTpl = {}; save(); render(); } };

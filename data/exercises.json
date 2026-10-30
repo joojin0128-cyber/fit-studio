@@ -600,6 +600,20 @@
    "video_query": "케이블 크런치 자세"
   },
   {
+   "id": "reverse_crunch",
+   "name": "리버스 크런치",
+   "primary": "아랫배",
+   "secondary": [],
+   "equipment": "맨몸·매트",
+   "kind": "core",
+   "rest_sec": 30,
+   "beginner_swap": null,
+   "alternatives": [
+    "cable_crunch"
+   ],
+   "video_query": "리버스 크런치 자세"
+  },
+  {
    "id": "hanging_knee_raise",
    "name": "행잉 니 레이즈",
    "primary": "복부",

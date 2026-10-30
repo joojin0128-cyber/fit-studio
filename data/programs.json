@@ -382,6 +382,154 @@
      "priority": 4
     }
    ]
+  },
+  "P_PUSH": {
+   "name": "전신 밀기 — 하체 앞 · 가슴 · 어깨 · 삼두",
+   "warmup": "full",
+   "cooldown": "full",
+   "items": [
+    {
+     "ex": "leg_press",
+     "sets": 4,
+     "reps": "10-12",
+     "priority": 1
+    },
+    {
+     "ex": "machine_chest_press",
+     "sets": 4,
+     "reps": "10-12",
+     "priority": 1
+    },
+    {
+     "ex": "db_shoulder_press",
+     "sets": 3,
+     "reps": "10",
+     "priority": 1
+    },
+    {
+     "ex": "incline_db_press",
+     "sets": 3,
+     "reps": "10-12",
+     "priority": 1
+    },
+    {
+     "ex": "leg_extension",
+     "sets": 3,
+     "reps": "12-15",
+     "priority": 1
+    },
+    {
+     "ex": "db_lateral_raise",
+     "sets": 3,
+     "reps": "12-15",
+     "priority": 1
+    },
+    {
+     "ex": "cable_pushdown",
+     "sets": 3,
+     "reps": "12",
+     "priority": 1
+    }
+   ]
+  },
+  "P_PULL": {
+   "name": "전신 당기기 — 등 · 하체 뒤 · 뒤어깨 · 이두",
+   "warmup": "full",
+   "cooldown": "full",
+   "items": [
+    {
+     "ex": "lat_pulldown",
+     "sets": 4,
+     "reps": "10-12",
+     "priority": 1
+    },
+    {
+     "ex": "seated_cable_row",
+     "sets": 4,
+     "reps": "10-12",
+     "priority": 1
+    },
+    {
+     "ex": "db_rdl",
+     "sets": 3,
+     "reps": "10",
+     "priority": 1
+    },
+    {
+     "ex": "leg_curl",
+     "sets": 3,
+     "reps": "12",
+     "priority": 1
+    },
+    {
+     "ex": "rear_delt_fly",
+     "sets": 3,
+     "reps": "12-15",
+     "priority": 1
+    },
+    {
+     "ex": "face_pull",
+     "sets": 3,
+     "reps": "15",
+     "priority": 1
+    },
+    {
+     "ex": "db_curl",
+     "sets": 3,
+     "reps": "12",
+     "priority": 1
+    }
+   ]
+  }
+ },
+ "presets": {
+  "ppl4": {
+   "name": "전신 밀기·당기기(PT 추천 · 4주)",
+   "weeks": [
+    [
+     "P_PUSH",
+     "P_PULL"
+    ]
+   ],
+   "length_weeks": 4,
+   "full_session": true,
+   "session_min": "75~90",
+   "note": "밀기 → 당기기 번갈아 반복 · 빠진 날은 다음 차례부터(요일 고정 아님) · 기본 월 밀기 · 화 당기기 · 수 걷기 · 목 밀기 · 금 당기기 · 토 걷기 · 일 쉼",
+   "walk_days": [
+    3,
+    6
+   ],
+   "rest_sec": "60~90",
+   "core_finisher": {
+    "minutes": 10,
+    "rest_sec": 30,
+    "sets_first_2_weeks": 2,
+    "sets_after": 3,
+    "items": [
+     {
+      "ex": "plank",
+      "reps": "30-45초"
+     },
+     {
+      "ex": "dead_bug",
+      "reps": "10"
+     },
+     {
+      "ex": "reverse_crunch",
+      "reps": "12",
+      "alt": "cable_crunch"
+     }
+    ]
+   },
+   "cardio": {
+    "type": "경사 걷기",
+    "detail": "경사 8~12% · 5.0~5.5km/h · 말은 되고 노래는 못 하는 강도",
+    "minutes_first_2_weeks": 15,
+    "minutes_after": 20,
+    "belly_plus": 5,
+    "rest_day": "걷기 30분(밖이든 러닝머신이든)"
+   },
+   "after": "4주 뒤 원래 분할로 — 오늘 화면에 안내 카드"
   }
  },
  "split": {

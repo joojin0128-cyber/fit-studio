@@ -20,7 +20,7 @@ const ENG = (() => {
     const ffm = ib ? ffmOf(ib) : null;
     const bmr = ib && (ib.v.bmr || ffm) ? (ib.v.bmr || 370 + 21.6 * ffm) : mif;
     const keep = bmr * R.activity_factor_by_sessions[String(p.freq)];
-    let kcal = p.goal === '근육' ? keep + (b >= 25 ? 0 : 250) : p.goal === '체지방 감량' ? Math.max(bmr, keep * 0.8) : keep;
+    let kcal = p.goal === '근육' ? keep + (b >= 25 ? 0 : 250) : p.goal === '체지방 감량' ? Math.max(bmr, p.belly ? keep - 350 : keep * 0.8) : keep;   // 뱃살: 하루 −300~400kcal(261031)
     let protein;
     if (ib && ffm && IB) { const sug = suggestGoal(R, p, ib); const coef = p.goal === '탄탄(유지)' && sug && sug.both ? IB.protein.g_per_kg_ffm['근육'] : IB.protein.g_per_kg_ffm[p.goal];
       const [lo, hi] = IB.protein.clamp_g_per_kg_bodyweight; protein = Math.min(hi * p.weight, Math.max(lo * p.weight, ffm * coef)); }
@@ -73,6 +73,7 @@ const ENG = (() => {
   }
   function splitWeeks(P, p) {
     const freq = String(Math.max(2, Math.min(5, +p.freq)));
+    const PR = p.preset && P.presets && P.presets[p.preset]; if (PR) return PR.weeks.map((w) => w.slice());   // 261031 PT 추천 밀기 · 당기기 — 요일은 주 횟수대로
     let weeks = P.split[freq].weeks.map((w) => w.slice());
     if (p.focus === '균형' && (freq === '4' || freq === '5')) weeks = weeks.map((w) => w.map((d) => (d === 'U_C' ? 'L_S' : d)));
     return weeks;
@@ -82,7 +83,8 @@ const ENG = (() => {
     let items = T.items.map((it) => ({ ...it }));
     for (const bo of (opts.boost || []).filter((x) => x.days.includes(key)).slice(0, 2)) if (!items.some((it) => it.ex === bo.ex) && exById[bo.ex])
       items.push({ ex: bo.ex, sets: bo.sets, reps: /최대/.test(bo.reps) ? '8-15' : bo.reps.replace(/\(.*\)/, ''), priority: 3, boost: `${bo.seg} 보강 · ${bo.why}${bo.weak ? ' · 약한 쪽(' + bo.weak + ')부터' : ''}${bo.how ? ' · ' + bo.how : ''}${/최대/.test(bo.reps) ? ' · 최대 횟수 −2' : ''}` });
-    if (p.focus === '복부·코어' && !items.some((it) => ['plank', 'cable_crunch'].includes(it.ex))) items.push({ ex: key === 'L_S' || key === 'B3' ? 'cable_crunch' : 'plank', sets: 2, reps: key === 'L_S' || key === 'B3' ? '12-15' : '30초', priority: 3 });
+    const PR = p.preset && P.presets && P.presets[p.preset];
+    if (!PR && p.focus === '복부·코어' && !items.some((it) => ['plank', 'cable_crunch'].includes(it.ex))) items.push({ ex: key === 'L_S' || key === 'B3' ? 'cable_crunch' : 'plank', sets: 2, reps: key === 'L_S' || key === 'B3' ? '12-15' : '30초', priority: 3 });
     const B = R.session_budget_min[String(p.minutes)] || R.session_budget_min['60'];
     let strengthMin = B.strength, cardioMin = B.cardio;
     if (+p.minutes === 30 && goal === '체지방 감량') { strengthMin = 15; cardioMin = 7; }
@@ -95,17 +97,24 @@ const ENG = (() => {
       if (opts.deload) sets = Math.max(2, Math.round(sets * 0.6));
       const tSets = sets;   // 시간 예산은 원래 세트로 — '가볍게'여도 운동 개수는 그대로(QA 261030 참고 ②)
       if (opts.easy) sets = Math.max(2, sets - 1);   // 술 다음 날 '가볍게' — 세트 −1 · RIR +1(rules.food_log.alcohol)
-      const rest = restSec(R, ex, goal), t = tSets * (40 + rest) + 60;
-      if (out.length >= B.max_exercises || used + t > strengthMin * 60) continue;
+      const rest = PR ? (ex.kind === 'compound' ? 90 : ex.kind === 'core' ? 30 : 60) : restSec(R, ex, goal), t = tSets * (40 + rest) + 60;   // 전신 밀기 · 당기기: 쉬기 60~90초
+      if (!(PR && PR.full_session) && (out.length >= B.max_exercises || used + t > strengthMin * 60)) continue;   // 전신 밀기 · 당기기는 75~90분 코스 — 시간 예산으로 빼지 않는다
       used += t;
-      out.push({ slot: it.ex, id, sets, reps: it.boost ? parseReps(it.reps) : goalReps(R, ex, it, goal), rest, priority: it.priority, boost: it.boost });
+      out.push({ slot: it.ex, id, sets, reps: it.boost || PR ? parseReps(it.reps) : goalReps(R, ex, it, goal),   /* PT 프로그램은 정한 횟수 그대로 */ rest, priority: it.priority, boost: it.boost });
     }
     const b = bmi(p), C = R.cardio[goal];
-    let cType = C.type, cMin = cardioMin;
+    let cType = C.type, cMin = cardioMin, cDetail = C.detail, cExtra = goal === '체지방 감량' ? 10 : 0;
     if (goal === '근육' && (key === 'L_S' || key === 'B3')) cMin = Math.min(cMin, 5);
     if (b >= 30) { cType = '자전거 · 일립티컬'; cMin = Math.max(cMin, 5); }
-    return { key, name: T.name, warmup: D.warmups.warmups[T.warmup], cooldown: D.warmups.cooldowns[T.cooldown], items: out,
-             cardio: { type: cType, detail: C.detail, minutes: cMin, extra: goal === '체지방 감량' ? 10 : 0 }, deload: !!opts.deload };
+    if (PR) {   // 밀기 · 당기기: (선택) 레그 프레스 → 복근 · 코어 10분 → 경사 걷기 — 근력 시간 예산과 따로(빠지지 않게)
+      const wk = opts.week || 0, lp = PR.optional && PR.optional.leg_press;
+      if (lp && p.legPress && lp.days.includes(key) && exById[lp.ex]) out.push({ slot: lp.ex, id: lp.ex, sets: lp.sets, reps: parseReps(lp.reps), rest: restSec(R, exById[lp.ex], goal), priority: 3, opt: lp.label });
+      const CF = PR.core_finisher, cs = wk < 2 ? CF.sets_first_2_weeks : CF.sets_after;
+      for (const c of CF.items) { const id = exById[c.ex] ? c.ex : c.alt; if (id) out.push({ slot: id, id, sets: cs, reps: parseReps(c.reps), rest: CF.rest_sec, priority: 4, core: true, alt: c.alt }); }
+      const PC = PR.cardio; cType = PC.type; cDetail = PC.detail; cMin = (wk < 2 ? PC.minutes_first_2_weeks : PC.minutes_after) + (goal === '체지방 감량' ? PC.belly_plus : 0); cExtra = 0;
+    }
+    return { key, name: T.name, warmup: D.warmups.warmups[T.warmup], cooldown: D.warmups.cooldowns[T.cooldown], items: out, preset: PR ? PR.name : null,
+             cardio: { type: cType, detail: cDetail, minutes: cMin, extra: cExtra }, deload: !!opts.deload };
   }
   // 놓친 날은 메꾸지 않고 '다음 순서부터' — 끝낸 횟수로 다음 날을 정한다
   function sequence(D, p) { return splitWeeks(D.programs, p).flat(); }
