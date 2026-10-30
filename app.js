@@ -381,7 +381,7 @@ function settings(v) {
       return `<p class="small">${md(ib.date)}${ib.model ? ` · InBody ${esc(ib.model)}` : ''} · 골격근량 ${ib.v.smm ?? '–'}kg · 체지방률 ${ib.v.pbf ?? '–'}% · 제지방량 ${ib.v.ffm ?? '–'}kg${ib.v.score ? ` · ${ib.v.score}점` : ''}</p>
        <p class="hint">${n.src === 'inbody' ? `칼로리는 인바디 기초대사 ${n.bmr.toLocaleString()}kcal 기준(키·체중 계산 ${n.mifflin.toLocaleString()})` : ib.useMifflin ? '키·체중 계산을 쓰기로 고름' : fresh ? '' : '측정한 지 30일 넘어 키·체중 계산으로 돌아갔어요 — 다시 재 주세요'}</p>
        ${sg && sg.goal !== p.goal ? `<p class="small">목표 제안: <b>${esc(sg.goal)}</b> — ${sg.why.map(esc).join(' · ')} <button class="small" id="sGoal" data-g="${esc(sg.goal)}">이 목표로 바꾸기</button></p>` : ''}
-       ${ENG.boosts(D.rules, ib).map((b) => `<p class="hint">💪 ${esc(exName(b.ex))} ${b.sets}×${esc(b.reps)} — ${esc(b.why)}</p>`).join('')}
+       ${ENG.boosts(D.rules, ib).length && p.preset ? '<p class="hint">💪 부위 보강은 PT 프로그램(전신 밀기 · 당기기) 동안 쉬어요 — 원래 분할로 돌아가면 다시 붙어요</p>' : ''}${p.preset ? '' : ENG.boosts(D.rules, ib).map((b) => `<p class="hint">💪 ${esc(exName(b.ex))} ${b.sets}×${esc(b.reps)} — ${esc(b.why)}</p>`).join('')}
        ${S.inbody.map((x, i) => [x, i]).reverse().map(([x, i]) => `<div class="row" style="justify-content:space-between"><span class="small">${md(x.date)} · 체중 ${x.v.weight}kg · 골격근 ${x.v.smm ?? '–'} · 체지방률 ${x.v.pbf ?? '–'}</span><button class="small danger" data-ibdel="${i}">지우기</button></div>`).join('')}`; })()}
     <button class="big" id="sIb">인바디 넣기(사진)</button>${Object.keys(S.ibTpl['기본'] || {}).length ? `<p class="hint">기억한 칸 위치 ${Object.keys(S.ibTpl['기본']).length}칸 <button class="small ghost" id="sTplX">잊기</button></p>` : ''}</div>
    ${planSettings()}
