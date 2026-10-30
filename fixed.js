@@ -7,7 +7,8 @@ const FX_DEFAULT = { 1: { type: 'workout', program: 'P_PUSH' }, 2: { type: 'work
 let FXV = null;   // 보고 있는 날짜(요일 탭)
 const dowOf = (date) => new Date(date + 'T12:00').getDay();
 // 기획 fixed_week.json(261031b): 운동 요일 3개(설정) · 주마다 A/B 번갈아 · 운동 날 식단 3가지 · 안 하는 날 4가지(월요일부터 순서대로)
-const FXS = () => { S.fx = S.fx || {}; if (!S.fx.keyEx) { if (S.keyEx.join() === 'incline_db_press,lat_pulldown,db_lateral_raise') S.keyEx = ['leg_press', 'lat_pulldown', 'machine_chest_press']; S.fx.keyEx = 1; }   // 그래프 운동 3개도 표에 있는 걸로(사용자가 바꾼 적 없을 때만)
+const fxNeed = () => ((D.fixed && D.fixed.settings && D.fixed.settings.workout_weekdays) || [1, 3, 5]).length;
+const FXS = () => { S.fx = S.fx || {}; if (S.fx.weekdays && S.fx.weekdays.length !== fxNeed()) { S.fx.weekdays = null; S.fx.draft = null; }   // 표가 바뀌었거나 고르다 만 요일(예: 2개만) — 기본으로(금요일이 걷기로 보이던 것) if (!S.fx.keyEx) { if (S.keyEx.join() === 'incline_db_press,lat_pulldown,db_lateral_raise') S.keyEx = ['leg_press', 'lat_pulldown', 'machine_chest_press']; S.fx.keyEx = 1; }   // 그래프 운동 3개도 표에 있는 걸로(사용자가 바꾼 적 없을 때만)
   if (!S.fx.weekdays) S.fx.weekdays = ((D.fixed && D.fixed.settings && D.fixed.settings.workout_weekdays) || [1, 3, 5]).slice(); if (!S.fx.start) S.fx.start = today0(); return S.fx; };
 const monFirst = (d) => (d + 6) % 7;   // 월=0 … 일=6
 function fixDay(date) {
@@ -52,6 +53,10 @@ function dayTabs(sel) {
   return `<div class="chips daytabs" id="fxDays">${[0, 1, 2, 3, 4, 5, 6].map((i) => { const d = addDays(mon, i); const ty = fixDay(d).type;
     return `<button data-d="${d}" class="${d === sel ? 'on' : ''}${d === t0 ? ' today' : ''}">${DOW[dowOf(d)]}<small>${ty === 'workout' ? '💪' : ty === 'walk' ? '🚶' : '·'}</small></button>`; }).join('')}</div>`;
 }
+function doneCard(date) {   // 지난 날 실제로 한 운동(계획과 다를 수 있다 — 예전 화면 · 30분 설정으로 잘린 날)
+  const ss = S.sessions.filter((x) => x.date === date); if (!ss.length) return '';
+  return ss.map((x) => `<div class="card"><h2>이날 한 운동 <span class="hint">${esc(x.name)}</span></h2>${Object.entries(x.ex).map(([id, sets]) => `<p class="small">${esc(exName(id))} <span class="hint">${sets.map((t) => (t.w ? t.w + 'kg×' : '') + t.r).join(', ')}</span></p>`).join('')}${x.cardioMin ? `<p class="hint">유산소 ${x.cardioMin}분</p>` : ''}</div>`).join('');
+}
 function previewCard(day) {
   return `<div class="card"><h2>${esc(day.name)}</h2><p class="hint">준비 5분 → 근력 → ${day.items.some((i) => i.core) ? '복근 10분 → ' : ''}${esc(day.cardio.type)} ${day.cardio.minutes}분 → 정리</p>
    ${day.items.map((it) => `<p class="small">${it.core ? '🔸 ' : ''}${esc(exName(it.id))} <span class="badge">${it.sets}×${repTxt(it.reps)}</span>${(() => { const l = lastOf(it.id); return l ? ` <span class="hint">지난번 ${l.sets.map((s) => (s.w ? s.w + 'kg×' : '') + s.r).join(', ')}</span>` : ''; })()}</p>`).join('')}</div>`;
@@ -72,7 +77,7 @@ function todayFixed(v) {
   const started = isT && S.cur && S.cur.date === sel, cday = started ? curCardDay(S.cur) : null;
   if (started && !cday) { S.cur = null; save(); }   // 알 수 없는 키 — 비우고 표대로
   if (cday || d.type === 'workout') { const day = cday || fixBuild(sel);
-    if (!isT) work = previewCard(day);
+    if (!isT) work = sel < t0 && doneCard(sel) ? doneCard(sel) + `<details class="card"><summary class="small">이날 계획 보기</summary>${previewCard(day)}</details>` : previewCard(day);
     else if (started && S.cur.finished) work = `<div class="card"><h2>오늘 운동 끝 👏</h2><p>${esc(day.name)} · 기록 저장됨</p><button id="reopen">기록 고치기</button></div>`;
     else work = workoutCard(day, started); }
   else if (d.type === 'walk') { const done = (S.walkDone || {})[sel];

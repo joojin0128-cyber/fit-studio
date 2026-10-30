@@ -31,7 +31,7 @@ function bindPlan(v, date) {
 // 설정 — 프로그램 · 내 기록 보내기
 function planSettings() {
   const PR = presetOf(), all = D.programs.presets && D.programs.presets[PRESET], wk = planWeek(today0());
-  if (isFixed() && D.fixed) { const fx = FXS(); return `<div class="card"><h2>운동 요일 <span class="hint">3개 고르기</span></h2><div class="chips" id="sWd">${[1, 2, 3, 4, 5, 6, 0].map((d) => `<button data-v="${d}" class="${fx.weekdays.includes(d) ? 'on' : ''}">${DOW[d]}</button>`).join('')}</div><p class="hint">운동 안 하는 날은 걷기 30분(일요일은 쉼). 밀기 · 당기기는 주마다 번갈아요</p></div>${exportCard()}`; }
+  if (isFixed() && D.fixed) { const fx = FXS(); return `<div class="card"><h2>운동 요일 <span class="hint">${fxNeed()}개 고르기</span></h2><div class="chips" id="sWd">${[1, 2, 3, 4, 5, 6, 0].map((d) => `<button data-v="${d}" class="${(fx.draft || fx.weekdays).includes(d) ? 'on' : ''}">${DOW[d]}</button>`).join('')}</div><p class="hint">${fx.draft ? `<b>${fxNeed() - fx.draft.length}개 더 고르면 바뀌어요</b> — 그 전엔 지금 표 그대로` : '고른 날에 밀기 → 당기기 순서 · 나머지 날은 걷기 30분(선택)'}</p></div>${exportCard()}`; }
   return `${isFixed() ? '' : `<div class="card"><h2>프로그램</h2>${PR ? `<p><b>${esc(PR.name)}</b> <span class="badge">${wk + 1}주째</span></p><p class="hint">${esc(PR.note)}</p><button id="sPplOff">원래 분할(주 ${S.profile.freq}회)로</button>`
     : `<p class="small">지금: 기본 분할(주 ${S.profile.freq}회)</p>${all ? `<button id="sPplOn">${esc(all.name)}로 바꾸기</button>` : ''}`}</div>`}
    ${exportCard()}`;
@@ -51,8 +51,9 @@ function exportData() {
 }
 function bindPlanSettings() {
   if ($('#sWd')) $('#sWd').onclick = (e) => { const b = e.target.closest('button'); if (!b) return; const fx = FXS(), d = +b.dataset.v;
-    if (fx.weekdays.includes(d)) fx.weekdays = fx.weekdays.filter((x) => x !== d); else if (fx.weekdays.length < 3) fx.weekdays.push(d); else { alert('3개까지예요 — 하나를 먼저 끄세요'); return; }
-    if (fx.weekdays.length === 3) save(); render(); };
+    const dr = (fx.draft || fx.weekdays).slice();   // 고르는 동안은 draft — 다 고르기 전엔 표가 안 바뀐다
+    if (dr.includes(d)) dr.splice(dr.indexOf(d), 1); else if (dr.length < fxNeed()) dr.push(d); else { alert(`${fxNeed()}개까지예요 — 하나를 먼저 끄세요`); return; }
+    if (dr.length === fxNeed()) { fx.weekdays = dr; fx.draft = null; } else fx.draft = dr; save(); render(); };
   if ($('#sPplOn')) $('#sPplOn').onclick = () => { tab = 'today'; usePreset(true, today0()); };
   if ($('#sPplOff')) $('#sPplOff').onclick = () => { if (confirm('원래 분할로 바꿀까요? 순서가 처음부터 시작해요')) { tab = 'today'; usePreset(false, today0()); } };
   const txt = () => JSON.stringify(exportData(), null, 1), name = `헬스기록_${ymd().replace(/-/g, '').slice(2)}.json`;

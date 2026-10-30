@@ -167,7 +167,7 @@ function workoutCard(day, started) {
    <div class="row"><b style="font-size:28px;font-variant-numeric:tabular-nums" id="cTime">${String(mm).padStart(2, '0')}:${String(ss).padStart(2, '0')}</b><button id="cGo" class="primary">${cardioRun ? '멈춤' : '시작'}</button><button id="cDone" class="${C.cardio.done ? 'primary' : ''}">${C.cardio.done ? '✓ 했어요' : '했어요'}</button></div>
    <h3>${day.items.some((i) => i.core) ? 5 : 4}. 정리 스트레칭</h3>${list(day.cooldown, 'cool')}
    <div class="check" id="tired"><span class="box ${C.tired ? 'done' : ''}">${C.tired ? '✓' : ''}</span><span>오늘 피곤했어요 <span class="hint">(한 주 3번이면 다음 주 디로드)</span></span></div>
-   <button class="primary big" id="fin">운동 끝 — 기록 저장</button>` : `<p class="small muted">${day.items.map((it) => esc(exName(it.id))).join(' · ')}</p>`}</div>`;
+   <button class="primary big" id="fin">운동 끝 — 기록 저장</button>` : (day.fixed || (typeof isFixed === 'function' && isFixed())) ? day.items.map((it) => `<p class="small">${it.core ? '🔸 ' : ''}${esc(exName(it.id))} <span class="badge">${it.sets}×${it.repsTxt ? esc(it.repsTxt) : repTxt(it.reps)}</span>${(() => { const l = lastOf(it.id); return l ? ` <span class="hint">지난번 ${l.sets.map((x) => (x.w ? x.w + 'kg×' : '') + x.r).join(', ')}</span>` : ''; })()}</p>`).join('') : `<p class="small muted">${day.items.map((it) => esc(exName(it.id))).join(' · ')}</p>`}</div>`;   /* 고정표: 오늘도 다른 요일과 같은 모양(운동마다 세트×횟수 한 줄) — 오늘만 모양이 다르던 것 */
 }
 function progressBar() { let t = 0, d = 0; for (const id in S.cur.sets) for (const s of S.cur.sets[id]) { t++; if (s.done) d++; } return `<div class="prog"><i style="width:${t ? Math.round(d / t * 100) : 0}%"></i></div><p class="hint">세트 ${d}/${t}</p>`; }
 function bindWorkout(day, date) {
