@@ -19,8 +19,16 @@ function fixDay(date) {
   const offs = [0, 1, 2, 3, 4, 5, 6].map((i) => dowOf(addDays(mondayOf(date), i))).filter((d) => !wds.includes(d)), oi = offs.indexOf(dow);
   return { ...(dow === 0 ? F.off_days.rest : F.off_days.walk), oi, wk };
 }
-function fixBuild(date) {
-  const d = fixDay(date); if (d.type !== 'workout') return null;
+// 하던 운동(cur) 카드 — 요일 표가 바뀌었거나 예전 키(U_A · P_PUSH …)로 시작한 운동도 그 운동 그대로 끝내게(QA 261031)
+function curCardDay(C) {
+  const k = String(C.key);
+  if (k.startsWith('FX_') && D.fixed && D.fixed.workouts[k.slice(3)]) return fixBuild(C.date, k.slice(3));
+  if (!D.programs.days[k]) return null;
+  const p = { ...S.profile, preset: k.startsWith('P_') ? 'ppl4' : S.profile.preset };
+  return ENG.buildDay(D, p, k, { swaps: S.swaps[k], deload: ENG.deloadNow(S, C.date), boost: BO(), week: planWeek(C.date) });
+}
+function fixBuild(date, wkey) {
+  const d0 = fixDay(date), d = wkey ? { type: 'workout', key: wkey, W: D.fixed.workouts[wkey] } : d0; if (d.type !== 'workout') return null;
   if (!d.W) { const p = { ...S.profile, preset: 'ppl4' }; return ENG.buildDay(D, p, d.program, { swaps: S.swaps[d.program], week: planWeek(date) }); }   // 표가 없을 때
   const W = d.W, ex = (id) => D.exById[id];
   const mk = (it, core) => ({ slot: it.ex, id: it.ex, sets: it.sets, reps: ENG.parseReps(String(it.reps).replace(/\(.*\)/, '')), repsTxt: /\(/.test(it.reps) ? it.reps : null, rest: core ? 30 : ex(it.ex) && ex(it.ex).kind === 'compound' ? 90 : 60, priority: 1, core });
@@ -61,8 +69,9 @@ function todayFixed(v) {
   const sel = FXV, isT = sel === t0, d = fixDay(sel), p = S.profile;
   $('#sub').textContent = `${md(sel)}(${DOW[dowOf(sel)]})${isT ? (t0 !== ymd() ? ' · 이어서' : ' · 오늘') : ''}`;
   let work = '';
-  const started = isT && S.cur && S.cur.date === sel;
-  if (d.type === 'workout') { const day = fixBuild(sel);
+  const started = isT && S.cur && S.cur.date === sel, cday = started ? curCardDay(S.cur) : null;
+  if (started && !cday) { S.cur = null; save(); }   // 알 수 없는 키 — 비우고 표대로
+  if (cday || d.type === 'workout') { const day = cday || fixBuild(sel);
     if (!isT) work = previewCard(day);
     else if (started && S.cur.finished) work = `<div class="card"><h2>오늘 운동 끝 👏</h2><p>${esc(day.name)} · 기록 저장됨</p><button id="reopen">기록 고치기</button></div>`;
     else work = workoutCard(day, started); }
@@ -77,7 +86,7 @@ function todayFixed(v) {
   if ($('#fxWalk')) $('#fxWalk').onclick = () => { S.walkDone = S.walkDone || {}; S.walkDone[sel] = !S.walkDone[sel]; save(); render(); };
   if (isT) { v.querySelectorAll('#fxMeals .check[data-sl]').forEach((el) => el.onclick = () => { const sl = el.dataset.sl, e = S.diet.eaten[sel] || {}; S.diet.eaten[sel] = { ...e, [sl]: !e[sl] }; save(); render(); });
     bindPlan(v, sel);
-    if (d.type === 'workout') { const day = fixBuild(sel);
+    if (cday || d.type === 'workout') { const day = cday || fixBuild(sel);
       if ($('#reopen')) $('#reopen').onclick = () => { S.cur.finished = false; S.done = Math.max(0, S.done - 1); S.sessions = S.sessions.filter((s) => !(s.date === sel && s.key === S.cur.key)); save(); render(); };
       if (!(started && S.cur.finished)) bindWorkout(day, sel); } }
 }

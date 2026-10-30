@@ -110,7 +110,7 @@ function carryOver() {   // QA 261030 ①: 자정을 넘겨도 기록이 사라�
   const C = S.cur; if (!C || C.date === today0()) return today0();
   if (C.finished) { if (Date.now() - (C.startedAt || 0) < 6 * 3600e3) return C.date; S.cur = null; save(); return today0(); }   // 재QA 261030: 끝낸 운동은 (6시간 지나면) 다음 날 새 카드로
   if (Date.now() - (C.startedAt || 0) < 6 * 3600e3) return C.date;
-  if (hasData(C)) saveSession(String(C.key).startsWith('FX_') && typeof fixBuild === 'function' ? fixBuild(C.date) : ENG.buildDay(D, S.profile, C.key, { swaps: S.swaps[C.key], deload: ENG.deloadNow(S, C.date), boost: BO(), week: planWeek(C.date) }));
+  if (hasData(C)) saveSession(typeof curCardDay === 'function' && isFixed() && curCardDay(C) ? curCardDay(C) : ENG.buildDay(D, S.profile, C.key, { swaps: S.swaps[C.key], deload: ENG.deloadNow(S, C.date), boost: BO(), week: planWeek(C.date) }));
   S.cur = null; save(); return today0();
 }
 function today(v) {
@@ -147,7 +147,7 @@ function workoutCard(day, started) {
   const C = started ? S.cur : null;
   const list = (arr, key) => arr.map((t, i) => `<div class="check" data-l="${key}" data-i="${i}"><span class="box ${C && C[key].includes(i) ? 'done' : ''}">${C && C[key].includes(i) ? '✓' : ''}</span><span>${esc(t)}</span></div>`).join('');
   const exCard = (it) => {
-    const ex = D.exById[it.id], last = lastOf(it.id), sets = C ? C.sets[it.id] : [], pr = S.prog[it.id] || {};
+    const ex = D.exById[it.id], last = lastOf(it.id), sets = C ? (C.sets[it.id] = C.sets[it.id] || Array.from({ length: it.sets }, () => ({ w: ex.equipment === '맨몸' ? 0 : '', r: it.reps.lo, done: false }))) : []   /* 하던 운동에 없는 칸은 빈 세트로(예전 키 · 대체 · 정보 변경) */, pr = S.prog[it.id] || {};
     const body = ex.equipment === '맨몸';
     return `<div class="card sub" data-ex="${it.id}" data-slot="${it.slot}"><h3>${esc(ex.name)} <span class="badge">${it.sets}×${it.repsTxt ? esc(it.repsTxt) : repTxt(it.reps)}</span> <span class="hint">쉬기 ${it.rest}초</span></h3>
      ${it.boost ? `<div class="hint">💪 ${esc(it.boost)}</div>` : ''}<div class="hint">${last ? `지난번 ${md(last.date)} · ${last.sets.map((s) => (body ? '' : `${s.w}kg×`) + s.r).join(', ')}` : '첫 기록 — 편한 무게로 · 자세 먼저'}${pr.up ? ` · <span class="up">지난번 다 채움 → +${ENG.incFor(ex) || '2회'}${ENG.incFor(ex) ? 'kg' : ''}</span>` : ''}${pr.dropped ? ' · 3번 못 채워 −10%' : ''}</div>
