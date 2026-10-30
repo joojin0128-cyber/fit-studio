@@ -68,7 +68,7 @@ function foodCards(date) {
    ${r.drink ? `<p class="small">🍺 술 마신 날 — 물 많이 · 안주는 단백질 먼저${sides.length ? `: ${sides.map((f) => esc(f.name)).join(' · ')}` : ''}. 내일 운동 강도는 오늘 화면에서 고를 수 있어요</p>` : ''}</div>`;
 }
 function bindFood(v, date) {
-  const done = () => { save(); render(); };
+  const done = () => { FST.qty = 1; FST.slot = null; save(); render(); };   // QA 261030: 양 · 끼니는 한 번 쓰고 기본(보통 · 시각 자동)으로
   $('#fSlot').onclick = (e) => { const b = e.target.closest('button'); if (b) { FST.slot = b.dataset.v; render(); } };
   $('#fQty').onclick = (e) => { const b = e.target.closest('button'); if (b) { FST.qty = +b.dataset.v; render(); } };
   const list = $('#fList'), q = $('#fQ'), slot = FST.slot || slotNow();
