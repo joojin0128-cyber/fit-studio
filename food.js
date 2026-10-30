@@ -38,7 +38,7 @@ const rodFor = (date) => { const h = new Date().getHours(), hr = date === ymd() 
   return ENG.restOfDay(D, S.profile, N(), S.diet, date, S.food.log[date] || [], isTrainOn(date), hr); };
 const pColor = (v, t) => (v >= t * 0.9 ? 'var(--ok)' : v >= t * 0.6 ? '#e0a800' : 'var(--muted)');   // rules.food_log.summary.colors — 빨강 쓰지 않는다
 
-function foodCards(date) {
+function foodCards(date, simple) {
   const log = foodLog(date), r = rodFor(date), slot = FST.slot || slotNow(), y = (S.food.log[addDays(date, -1)] || []).filter((e) => e.slot === slot);
   const bySlot = ENG.FOOD_SLOTS.map((s) => [s, log.map((e, i) => [e, i]).filter(([e]) => e.slot === s)]).filter(([, a]) => a.length);
   const gen = foodsAll().filter((f) => f.generic), fr = freqFoods(slot), sides = r.drink ? foodsAll().filter((f) => /닭꼬치|두부김치|마른안주|오징어|노가리|황태/.test(f.name)).slice(0, 3) : [];
@@ -57,7 +57,7 @@ function foodCards(date) {
    <div style="margin-top:10px"><b style="font-size:30px">${r.eaten.protein}<span class="muted" style="font-size:17px"> / ${r.target.protein}g 단백질</span></b>
     <div class="prog" style="height:18px"><i style="width:${pct}%;background:${pColor(r.eaten.protein, r.target.protein)}"></i></div>
     <p class="hint">${r.left.kcal >= 0 ? `남은 약 ${r.left.kcal.toLocaleString()}kcal` : `오늘 목표보다 약 ${(-r.left.kcal).toLocaleString()}kcal 더 먹었어요`} · 먹은 ${r.eaten.kcal.toLocaleString()}kcal</p>
-    <details><summary class="hint">탄수 · 지방</summary><p class="small">탄수 ${r.eaten.carb}g · 지방 ${r.eaten.fat}g <span class="hint">(목록 음식만 · 대략값)</span></p></details></div></div>
+    <details><summary class="hint">탄수 · 지방</summary><p class="small">탄수 ${r.eaten.carb}g · 지방 ${r.eaten.fat}g <span class="hint">(목록 음식만 · 대략값)</span></p></details></div></div>${simple ? '' : `
   <div class="card" id="restCard"><h2>남은 하루${r.over ? ' <span class="badge">많이 먹은 날</span>' : ''}</h2>
    ${r.picks.length ? `<p class="hint">남은 단백질 ${r.left.protein}g을 남은 ${r.picks.length}끼에 나눴어요${r.over ? ' — 단백질 위주 가벼운 메뉴로' : ''}</p>` : ''}
    ${r.picks.map((pk) => { const m = D.mealById[pk.id]; return m ? `<div class="meal"><span class="badge">${pk.slot}</span><div><div>${esc(m.name)}</div><span class="hint">${m.protein_g}g · ${m.kcal}kcal${pk.rice ? ` · <b>${esc(pk.rice)}</b>` : ''}</span></div><button class="small" data-ate="${pk.id}" data-slot="${pk.slot}">먹었어요</button></div>` : ''; }).join('')}
@@ -65,7 +65,7 @@ function foodCards(date) {
    ${!r.picks.length ? `<p class="hint">오늘 끼니는 끝났어요${r.left.protein >= 20 ? ` — 단백질이 ${r.left.protein}g 남았어요. 자기 전 단백질 음료 하나면 좋아요` : ''}</p>` : ''}
    ${r.under ? '<p class="small">오늘 덜 먹었어요 — 우유 · 바나나 · 견과 중 하나 어때요(선택)</p>' : ''}
    ${r.over && date === today0() ? `<p class="small">많이 먹은 날이에요. 굶거나 내일 줄이지 않아도 돼요 — 내일은 평소 계획 그대로.</p>${S.food.walk[date] ? `<p class="small">🚶 걷기 ${S.food.walk[date]}분을 오늘 운동에 붙였어요 <button class="small ghost" id="fWalkX">빼기</button></p>` : '<button class="small" id="fWalk">걷기 20분 붙이기(선택)</button>'}` : ''}
-   ${r.drink ? `<p class="small">🍺 술 마신 날 — 물 많이 · 안주는 단백질 먼저${sides.length ? `: ${sides.map((f) => esc(f.name)).join(' · ')}` : ''}. 내일 운동 강도는 오늘 화면에서 고를 수 있어요</p>` : ''}</div>`;
+   ${r.drink ? `<p class="small">🍺 술 마신 날 — 물 많이 · 안주는 단백질 먼저${sides.length ? `: ${sides.map((f) => esc(f.name)).join(' · ')}` : ''}. 내일 운동 강도는 오늘 화면에서 고를 수 있어요</p>` : ''}</div>`}`;
 }
 function bindFood(v, date) {
   const done = () => { FST.qty = 1; FST.slot = null; save(); render(); };   // QA 261030: 양 · 끼니는 한 번 쓰고 기본(보통 · 시각 자동)으로

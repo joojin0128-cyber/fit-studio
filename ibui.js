@@ -251,7 +251,7 @@ function ibResult(rec) {
   v.innerHTML = `<div class="card"><h2>저장했어요 · ${md(rec.date)}</h2>
     <p class="small">골격근량 ${rec.v.smm ?? '–'}kg · 체지방률 ${rec.v.pbf ?? '–'}% · 제지방량 ${rec.v.ffm ?? '–'}kg</p>
     <p class="small">하루 ${n.kcal.toLocaleString()}kcal(쉬는 날 ${n.restKcal.toLocaleString()}) · 단백질 ${n.protein}g <span class="hint">${n.src === 'inbody' ? `기초대사 ${n.bmr.toLocaleString()}kcal(인바디) 기준` : '키·체중 계산 기준'}</span></p></div>
-   ${sug && sug.goal !== p.goal ? `<div class="card"><h2>목표 제안 · ${esc(sug.goal)}${sug.strong ? ' <span class="badge">강하게</span>' : ''}</h2><p class="small">${sug.why.map(esc).join(' · ')}</p>${sug.cardio ? `<p class="hint">유산소 +${sug.cardio}분을 권해요</p>` : ''}<p class="hint">지금 목표: ${esc(p.goal)}</p><button class="primary big" id="ibGoal">이 목표로 바꾸기</button></div>` : ''}
+   ${!isFixed() && sug && sug.goal !== p.goal ? `<div class="card"><h2>목표 제안 · ${esc(sug.goal)}${sug.strong ? ' <span class="badge">강하게</span>' : ''}</h2><p class="small">${sug.why.map(esc).join(' · ')}</p>${sug.cardio ? `<p class="hint">유산소 +${sug.cardio}분을 권해요</p>` : ''}<p class="hint">지금 목표: ${esc(p.goal)}</p><button class="primary big" id="ibGoal">이 목표로 바꾸기</button></div>` : ''}
    ${bo.length ? `<div class="card"><h2>부위 보강</h2>${bo.map((b) => `<p class="small"><b>${esc(exName(b.ex))}</b> ${b.sets}×${esc(b.reps)} — ${esc(b.why)}${b.weak ? ` · 약한 쪽(${esc(b.weak)})부터` : ''}</p>`).join('')}<p class="hint">해당하는 날 운동 끝에 들어가요(시간이 모자라면 먼저 빠져요). 다음 인바디에서 풀리면 빠져요.</p></div>` : ''}
    <button class="big" id="ibOk">확인</button>`;
   if ($('#ibGoal')) $('#ibGoal').onclick = () => { S.profile.goal = sug.goal; S.planStart = ymd(); S.done = 0; S.cur = null; S.swaps = {}; save(); ibResult(rec); };

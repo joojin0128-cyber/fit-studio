@@ -25,7 +25,7 @@ function render() {
   document.querySelectorAll('#tabs button').forEach((b) => b.classList.toggle('on', b.dataset.tab === tab));
   $('#tabs').style.display = S.profile ? '' : 'none';
   if (!S.profile) return wizard($('#view'));
-  ({ today, log, diet, settings }[tab] || today)($('#view'));
+  ({ today: isFixed() ? todayFixed : today, log, diet: isFixed() ? dietFixed : diet, settings }[tab] || today)($('#view'));   // 261031 고정표 화면
 }
 
 // ── ① 처음 설정 ──
@@ -110,7 +110,7 @@ function carryOver() {   // QA 261030 ①: 자정을 넘겨도 기록이 사라�
   const C = S.cur; if (!C || C.date === today0()) return today0();
   if (C.finished) { if (Date.now() - (C.startedAt || 0) < 6 * 3600e3) return C.date; S.cur = null; save(); return today0(); }   // 재QA 261030: 끝낸 운동은 (6시간 지나면) 다음 날 새 카드로
   if (Date.now() - (C.startedAt || 0) < 6 * 3600e3) return C.date;
-  if (hasData(C)) saveSession(ENG.buildDay(D, S.profile, C.key, { swaps: S.swaps[C.key], deload: ENG.deloadNow(S, C.date), boost: BO(), week: planWeek(C.date) }));
+  if (hasData(C)) saveSession(String(C.key).startsWith('FX_') && typeof fixBuild === 'function' ? fixBuild(C.date) : ENG.buildDay(D, S.profile, C.key, { swaps: S.swaps[C.key], deload: ENG.deloadNow(S, C.date), boost: BO(), week: planWeek(C.date) }));
   S.cur = null; save(); return today0();
 }
 function today(v) {
@@ -149,13 +149,13 @@ function workoutCard(day, started) {
   const exCard = (it) => {
     const ex = D.exById[it.id], last = lastOf(it.id), sets = C ? C.sets[it.id] : [], pr = S.prog[it.id] || {};
     const body = ex.equipment === '맨몸';
-    return `<div class="card sub" data-ex="${it.id}" data-slot="${it.slot}"><h3>${esc(ex.name)} <span class="badge">${it.sets}×${repTxt(it.reps)}</span> <span class="hint">쉬기 ${it.rest}초</span></h3>
+    return `<div class="card sub" data-ex="${it.id}" data-slot="${it.slot}"><h3>${esc(ex.name)} <span class="badge">${it.sets}×${it.repsTxt ? esc(it.repsTxt) : repTxt(it.reps)}</span> <span class="hint">쉬기 ${it.rest}초</span></h3>
      ${it.boost ? `<div class="hint">💪 ${esc(it.boost)}</div>` : ''}<div class="hint">${last ? `지난번 ${md(last.date)} · ${last.sets.map((s) => (body ? '' : `${s.w}kg×`) + s.r).join(', ')}` : '첫 기록 — 편한 무게로 · 자세 먼저'}${pr.up ? ` · <span class="up">지난번 다 채움 → +${ENG.incFor(ex) || '2회'}${ENG.incFor(ex) ? 'kg' : ''}</span>` : ''}${pr.dropped ? ' · 3번 못 채워 −10%' : ''}</div>
      ${C ? sets.map((s, k) => `<div class="set"><span class="n">${k + 1}</span>
        ${body ? '<span class="muted small">맨몸</span>' : `<button class="val" data-f="w" data-k="${k}">${s.w === '' ? '무게' : s.w + 'kg'}</button>`}
        <button class="val" data-f="r" data-k="${k}">${s.r}${it.reps.sec ? '초' : '회'}</button>
        <button class="tick ${s.done ? 'done' : ''}" data-k="${k}" aria-label="${k + 1}세트 끝">${s.done ? '✓' : ''}</button></div>`).join('') : ''}
-     <div class="row"><button class="small ghost" data-alt="1">대체 운동</button><a class="small" href="https://www.youtube.com/results?search_query=${encodeURIComponent(ex.video_query)}" target="_blank" rel="noopener">자세 영상 검색</a></div></div>`;
+     <div class="row">${day.fixed ? '' : '<button class="small ghost" data-alt="1">대체 운동</button>'}<a class="small" href="https://www.youtube.com/results?search_query=${encodeURIComponent(ex.video_query)}" target="_blank" rel="noopener">자세 영상 검색</a></div></div>`;
   };
   const mm = C ? Math.floor(C.cardio.sec / 60) : 0, ss = C ? C.cardio.sec % 60 : 0;
   return `<div class="card"><h2>오늘 운동 · ${esc(day.name)}${day.easy ? ' <span class="badge">🍺 가볍게 · 세트 −1 · RIR +1</span>' : day.deload ? ' <span class="badge">디로드 주</span>' : ''}</h2>
@@ -187,7 +187,7 @@ function bindWorkout(day, date) {
       if (ex.equipment !== '맨몸' && (s.w === '' || isNaN(+s.w))) { alert('무게를 먼저 넣어 주세요'); return; }
       audioPrime(); s.done = !s.done; save(); render(); if (s.done) restTimer(it.rest, `${ex.name} 쉬는 시간`);
     });
-    card.querySelector('[data-alt]').onclick = () => {
+    if (card.querySelector('[data-alt]')) card.querySelector('[data-alt]').onclick = () => {   // 고정표 화면엔 대체 운동 버튼이 없다
       const alts = [ex.beginner_swap, ...(ex.alternatives || [])].filter((x, i, a) => x && a.indexOf(x) === i && x !== id);
       const base = D.exById[card.dataset.slot] ? card.dataset.slot : id;
       const pick = prompt(`바꿀 운동 번호를 고르세요\n${alts.map((a, i) => `${i + 1}. ${exName(a)}`).join('\n')}\n0. 원래 운동(${exName(base)})`, '1');
@@ -380,17 +380,17 @@ function settings(v) {
       const fresh = ENG.ibFresh(ib, ymd()), sg = ENG.suggestGoal(D.rules, p, ib);
       return `<p class="small">${md(ib.date)}${ib.model ? ` · InBody ${esc(ib.model)}` : ''} · 골격근량 ${ib.v.smm ?? '–'}kg · 체지방률 ${ib.v.pbf ?? '–'}% · 제지방량 ${ib.v.ffm ?? '–'}kg${ib.v.score ? ` · ${ib.v.score}점` : ''}</p>
        <p class="hint">${n.src === 'inbody' ? `칼로리는 인바디 기초대사 ${n.bmr.toLocaleString()}kcal 기준(키·체중 계산 ${n.mifflin.toLocaleString()})` : ib.useMifflin ? '키·체중 계산을 쓰기로 고름' : fresh ? '' : '측정한 지 30일 넘어 키·체중 계산으로 돌아갔어요 — 다시 재 주세요'}</p>
-       ${sg && sg.goal !== p.goal ? `<p class="small">목표 제안: <b>${esc(sg.goal)}</b> — ${sg.why.map(esc).join(' · ')} <button class="small" id="sGoal" data-g="${esc(sg.goal)}">이 목표로 바꾸기</button></p>` : ''}
+       ${!isFixed() && sg && sg.goal !== p.goal ? `<p class="small">목표 제안: <b>${esc(sg.goal)}</b> — ${sg.why.map(esc).join(' · ')} <button class="small" id="sGoal" data-g="${esc(sg.goal)}">이 목표로 바꾸기</button></p>` : ''}
        ${ENG.boosts(D.rules, ib).length && p.preset ? '<p class="hint">💪 부위 보강은 PT 프로그램(전신 밀기 · 당기기) 동안 쉬어요 — 원래 분할로 돌아가면 다시 붙어요</p>' : ''}${p.preset ? '' : ENG.boosts(D.rules, ib).map((b) => `<p class="hint">💪 ${esc(exName(b.ex))} ${b.sets}×${esc(b.reps)} — ${esc(b.why)}</p>`).join('')}
        ${S.inbody.map((x, i) => [x, i]).reverse().map(([x, i]) => `<div class="row" style="justify-content:space-between"><span class="small">${md(x.date)} · 체중 ${x.v.weight}kg · 골격근 ${x.v.smm ?? '–'} · 체지방률 ${x.v.pbf ?? '–'}</span><button class="small danger" data-ibdel="${i}">지우기</button></div>`).join('')}`; })()}
     <button class="big" id="sIb">인바디 넣기(사진)</button>${Object.keys(S.ibTpl['기본'] || {}).length ? `<p class="hint">기억한 칸 위치 ${Object.keys(S.ibTpl['기본']).length}칸 <button class="small ghost" id="sTplX">잊기</button></p>` : ''}</div>
    ${planSettings()}
-   <div class="card"><h2>내 순서 <span class="hint">놓친 날은 메꾸지 않고 다음 순서부터</span></h2>${[...new Set(seq)].map((k) => { const d = ENG.buildDay(D, p, k, { swaps: S.swaps[k], boost: BO(), week: planWeek(today0()) }); return `<p class="small"><b>${esc(d.name)}</b> — ${d.items.map((it) => esc(exName(it.id))).join(' · ')}</p>`; }).join('')}
-    <label>디로드 주기</label><div class="chips" id="sDel">${[4, 5, 6].map((w) => `<button data-v="${w}" class="${S.deloadEvery === w ? 'on' : ''}">${w}주마다</button>`).join('')}</div></div>
+   ${isFixed() ? '' : `<div class="card"><h2>내 순서 <span class="hint">놓친 날은 메꾸지 않고 다음 순서부터</span></h2>${[...new Set(seq)].map((k) => { const d = ENG.buildDay(D, p, k, { swaps: S.swaps[k], boost: BO(), week: planWeek(today0()) }); return `<p class="small"><b>${esc(d.name)}</b> — ${d.items.map((it) => esc(exName(it.id))).join(' · ')}</p>`; }).join('')}
+    <label>디로드 주기</label><div class="chips" id="sDel">${[4, 5, 6].map((w) => `<button data-v="${w}" class="${S.deloadEvery === w ? 'on' : ''}">${w}주마다</button>`).join('')}</div></div>`}
    <div class="card"><h2>한눈에 보기 운동 3개</h2>${[0, 1, 2].map((i) => `<select data-ke="${i}">${D.exercises.exercises.filter((e) => e.equipment !== '맨몸').map((e) => `<option value="${e.id}" ${S.keyEx[i] === e.id ? 'selected' : ''}>${esc(e.name)}</option>`).join('')}</select>`).join('')}</div>
    <div class="card"><h2>화면</h2><div class="chips" id="sTheme">${[['auto', '폰 설정 따라'], ['light', '밝게'], ['dark', '어둡게']].map(([k, t]) => `<button data-v="${k}" class="${(S.theme || 'auto') === k ? 'on' : ''}">${t}</button>`).join('')}</div></div>
-   <div class="card"><h2>싫어요</h2>${S.diet.noIds.map((id) => `<div class="row" style="justify-content:space-between"><span class="small">${esc(D.mealById[id]?.name || id)}</span><button class="small" data-un="${esc(id)}">다시 보기</button></div>`).join('')}
-    ${S.diet.noTags.map((t) => `<div class="row" style="justify-content:space-between"><span class="small">재료: ${esc(t)}</span><button class="small" data-ut="${esc(t)}">다시 보기</button></div>`).join('') || ''}${!S.diet.noIds.length && !S.diet.noTags.length ? '<p class="muted">없음</p>' : ''}</div>
+   ${isFixed() ? '' : `<div class="card"><h2>싫어요</h2>${S.diet.noIds.map((id) => `<div class="row" style="justify-content:space-between"><span class="small">${esc(D.mealById[id]?.name || id)}</span><button class="small" data-un="${esc(id)}">다시 보기</button></div>`).join('')}
+    ${S.diet.noTags.map((t) => `<div class="row" style="justify-content:space-between"><span class="small">재료: ${esc(t)}</span><button class="small" data-ut="${esc(t)}">다시 보기</button></div>`).join('') || ''}${!S.diet.noIds.length && !S.diet.noTags.length ? '<p class="muted">없음</p>' : ''}</div>`}
    <div class="card"><h2>폰 바꿀 때</h2><p class="hint">기록은 이 폰 안에만 있어요(서버에 올라가지 않아요). 새 폰에서는 내보낸 파일을 불러오세요.</p>
     <div class="row"><button id="sOut">JSON 내보내기</button><button id="sIn">JSON 불러오기</button><input type="file" id="sFile" accept=".json,application/json" hidden></div></div>
    <div class="card"><p class="hint">${esc(D.rules.disclaimer)}</p><button class="big danger" id="sWipe">전부 지우기</button></div>`;
@@ -400,7 +400,7 @@ function settings(v) {
   if ($('#sGoal')) $('#sGoal').onclick = (e) => { S.profile.goal = e.target.dataset.g; S.planStart = ymd(); S.done = 0; S.cur = null; S.swaps = {}; save(); render(); };
   if ($('#sTplX')) $('#sTplX').onclick = () => { if (confirm('기억한 칸 위치를 잊을까요? 다음 사진부터 처음처럼 읽어요')) { S.ibTpl = {}; save(); render(); } };
   v.querySelectorAll('[data-ibdel]').forEach((b) => b.onclick = () => { const i = +b.dataset.ibdel, x = S.inbody[i]; if (x && confirm(`${x.date} 인바디 기록을 지울까요?`)) { S.inbody.splice(i, 1); save(); render(); } });   // QA 참고: 날짜가 아니라 그 한 건만
-  $('#sDel').onclick = (e) => { const b = e.target.closest('button'); if (b) { S.deloadEvery = +b.dataset.v; save(); render(); } };
+  if ($('#sDel')) $('#sDel').onclick = (e) => { const b = e.target.closest('button'); if (b) { S.deloadEvery = +b.dataset.v; save(); render(); } };
   v.querySelectorAll('[data-ke]').forEach((s) => s.onchange = () => { S.keyEx[+s.dataset.ke] = s.value; save(); });
   $('#sTheme').onclick = (e) => { const b = e.target.closest('button'); if (b) { S.theme = b.dataset.v; save(); render(); } };
   v.querySelectorAll('[data-un]').forEach((b) => b.onclick = () => { S.diet.noIds = S.diet.noIds.filter((x) => x !== b.dataset.un); save(); render(); });
@@ -413,10 +413,10 @@ function settings(v) {
 
 function exportJson() { S.lastExport = Date.now(); save(); const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([JSON.stringify(S, null, 1)], { type: 'application/json' })); a.download = `헬스스튜디오_${ymd()}.json`; document.body.appendChild(a); a.click(); a.remove(); render(); }
 // ── 시작 ──
-document.getElementById('tabs').addEventListener('click', (e) => { const b = e.target.closest('button'); if (!b) return; tab = b.dataset.tab; render(); window.scrollTo(0, 0); });
+document.getElementById('tabs').addEventListener('click', (e) => { const b = e.target.closest('button'); if (!b) return; if (b.dataset.tab === 'today' && tab !== 'today') FXV = null; tab = b.dataset.tab; render(); window.scrollTo(0, 0); });
 async function boot() {
   const get = (n) => fetch(`data/${n}.json`).then((r) => { if (!r.ok) throw new Error(n); return r.json(); });
-  try { const [rules, exercises, programs, warmups, meals] = await Promise.all(['rules', 'exercises', 'programs', 'warmups', 'meals'].map(get)); D = { rules, exercises, programs, warmups, meals }; D.foods = await fetch('data/foods.json').then((r) => (r.ok ? r.json() : null)).catch(() => null); }
+  try { const [rules, exercises, programs, warmups, meals] = await Promise.all(['rules', 'exercises', 'programs', 'warmups', 'meals'].map(get)); D = { rules, exercises, programs, warmups, meals }; D.foods = await fetch('data/foods.json').then((r) => (r.ok ? r.json() : null)).catch(() => null); D.fixed = await fetch('data/fixed_week.json').then((r) => (r.ok ? r.json() : null)).catch(() => null); }
   catch (e) { $('#view').innerHTML = '<div class="card"><h2>처음 한 번은 인터넷이 필요해요</h2><p class="muted">연결된 뒤 다시 열면 그다음부터는 인터넷 없이도 열립니다.</p></div>'; return; }
   D.exById = Object.fromEntries(D.exercises.exercises.map((e) => [e.id, e])); D.mealById = Object.fromEntries(D.meals.meals.map((m) => [m.id, m]));
   load(); render();
