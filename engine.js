@@ -93,6 +93,7 @@ const ENG = (() => {
       const ex = exById[id];
       let sets = it.sets - (p.exp === '처음' ? 1 : 0); sets = Math.max(2, sets);
       if (opts.deload) sets = Math.max(2, Math.round(sets * 0.6));
+      if (opts.easy) sets = Math.max(2, sets - 1);   // 술 다음 날 '가볍게' — 세트 −1 · RIR +1(rules.food_log.alcohol)
       const rest = restSec(R, ex, goal), t = sets * (40 + rest) + 60;
       if (out.length >= B.max_exercises || used + t > strengthMin * 60) continue;
       used += t;
@@ -181,6 +182,42 @@ const ENG = (() => {
       return { item: a.item, txt };
     }).sort((x, y) => x.item.localeCompare(y.item, 'ko'));
   }
-  return { kindsFor, ymd, addDays, mondayOf, GOALS, bmi, numbers, ibFresh, smmStd, suggestGoal, boosts, parseReps, buildDay, sequence, nextKey, isTrainDay, progress, incFor, deloadNow, planWeekMeals, nextCandidate, shopping, parseQty };
+  // 먹은 것 기록 → 남은 하루(261030) — 기획 rules.food_log(261030c)
+  const FOOD_SLOTS = ['아침', '점심', '간식', '저녁', '야식'];
+  const DRINK = /술|소주|맥주|와인|막걸리|하이볼|위스키|칵테일|사케|보드카|소맥/;
+  const SOJU_EQ = { soju: 1, soju_glass: 1 / 7, beer: 1 / 3, beer_can: 1 / 3, somaek: 1 / 3, makgeolli: 0.75, wine: 1 / 4, highball: 1 / 4 };   // 소주 1병 = 1 · 맥주 3잔 = 1
+  const PLAN_END = { 아침: 10, 점심: 15, 운동전: 18, 간식: 18, 저녁: 22 };   // 그 시각이 지나면 지난 끼니
+  const foodTotals = (log) => (log || []).reduce((a, e) => ({ kcal: a.kcal + (e.kcal || 0) * (e.qty || 1), protein: a.protein + (e.protein || 0) * (e.qty || 1), carb: a.carb + (e.carb || 0) * (e.qty || 1), fat: a.fat + (e.fat || 0) * (e.qty || 1) }), { kcal: 0, protein: 0, carb: 0, fat: 0 });
+  const isDrink = (e) => !!e.alcohol || (e.tags || []).includes('술') || DRINK.test(e.name || '');
+  const sojuEq = (log) => (log || []).filter(isDrink).reduce((a, e) => a + (SOJU_EQ[e.fid] ?? 1 / 3) * (e.qty || 1), 0);
+  const riceIn = (m) => { const r = (m.shopping || []).find((x) => /밥/.test(x.item)); if (!r) return /밥|덮밥|비빔밥|공기/.test(m.name) ? 1 : 0; return /반/.test(r.qty) ? 0.5 : /2\/3/.test(r.qty) ? 0.67 : /1\/3/.test(r.qty) ? 0.33 : 1; };
+  function restOfDay(D, p, N, diet, date, log, train, hour) {
+    const eaten = foodTotals(log), kcal = train ? N.kcal : N.restKcal, ratio = slotsFor(D, train);
+    const done = new Set((log || []).map((e) => (e.slot === '야식' ? '저녁' : e.slot === '간식' && ratio['운동전'] != null && hour < 18 ? '운동전' : e.slot)));
+    const left = Object.keys(ratio).filter((s) => !done.has(s) && hour < (PLAN_END[s] ?? 24));
+    const rk = kcal - eaten.kcal, rp = Math.max(0, N.protein - eaten.protein), over = eaten.kcal >= kcal * 1.1, drink = (log || []).some(isDrink);
+    const wsum = left.reduce((a, s) => a + ratio[s], 0) || 1, picks = [], used = new Set();
+    for (const s of left) {
+      const tk = Math.max(0, rk) / left.length, tp = rp / left.length, kinds = kindsFor(diet.mode, s, date);   // 기획: 남은 단백질 ÷ 남은 끼니 수
+      const ok = (m) => m.slots.includes(s) && !diet.noIds.includes(m.id) && !m.tags.some((t) => diet.noTags.includes(t)) && !used.has(m.id);
+      let cand = D.meals.meals.filter((m) => ok(m) && kinds.includes(m.kind)); if (!cand.length) cand = D.meals.meals.filter(ok);
+      const inK = (m) => Math.abs(m.kcal - tk) <= tk * 0.2;
+      if (over) cand.sort((a, b) => (a.protein_g < tp * 0.7) - (b.protein_g < tp * 0.7) || a.kcal - b.kcal);   // 많이 먹은 날: 단백질 위주 가벼운 메뉴
+      else cand.sort((a, b) => Math.abs(a.protein_g - tp) - Math.abs(b.protein_g - tp) || (!inK(a)) - (!inK(b)) || Math.abs(a.kcal - tk) - Math.abs(b.kcal - tk));
+      const m = cand[0]; if (!m) continue; used.add(m.id);
+      let rice = null; const base = riceIn(m);
+      if (base) { const f = over ? 0.5 : [0.5, 0.67, 1].reduce((b, x) => (Math.abs(m.kcal + (x - base) * 315 - tk) < Math.abs(m.kcal + (b - base) * 315 - tk) ? x : b), 1); rice = `밥 ${f === 0.5 ? '반' : f === 0.67 ? '2/3' : '1'}공기`; }
+      picks.push({ slot: s, id: m.id, tk: Math.round(tk), tp: Math.round(tp), rice });
+    }
+    // 끼니당 단백질이 40g 넘게 필요하면 단백질 간식 하나 더(rules.food_log.replan.protein_gap)
+    let extra = null;
+    if (left.length && rp / left.length > 40 && D.foods) { const fb = Object.fromEntries(D.foods.foods.map((f) => [f.id, f]));
+      const f = ['protein_shake', 'meetree_ball', 'chicken_breast', 'egg'].map((id) => fb[id]).find((x) => x && !diet.noTags.some((t) => x.name.includes(t)));
+      if (f) extra = { id: f.id, name: f.name, kcal: f.kcal, protein: f.protein_g, serving: f.serving }; }
+    const under = hour >= 22 && eaten.kcal < kcal * 0.7;
+    return { eaten: { kcal: Math.round(eaten.kcal), protein: Math.round(eaten.protein), carb: Math.round(eaten.carb), fat: Math.round(eaten.fat) }, target: { kcal, protein: N.protein },
+      left: { kcal: Math.round(rk), protein: Math.round(rp) }, picks, extra, over, under, drink, soju: Math.round(sojuEq(log) * 100) / 100 };
+  }
+  return { FOOD_SLOTS, foodTotals, isDrink, sojuEq, restOfDay, kindsFor, ymd, addDays, mondayOf, GOALS, bmi, numbers, ibFresh, smmStd, suggestGoal, boosts, parseReps, buildDay, sequence, nextKey, isTrainDay, progress, incFor, deloadNow, planWeekMeals, nextCandidate, shopping, parseQty };
 })();
 if (typeof module !== 'undefined') module.exports = ENG;

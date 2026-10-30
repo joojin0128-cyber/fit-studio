@@ -10,9 +10,9 @@ let D = null, S = null, tab = 'today';
 
 function blank() {
   return { v: 2, profile: null, planStart: null, deloadEvery: 5, earlyDeloadWeek: null, done: 0, sessions: [], body: [], waist: [], prog: {}, swaps: {}, cur: null,
-    diet: { mode: '기본', noIds: [], noTags: null, swap: {}, eaten: {}, have: [] }, inbody: [], ibTpl: {}, keyEx: ['incline_db_press', 'lat_pulldown', 'db_lateral_raise'], theme: 'auto' };
+    diet: { mode: '기본', noIds: [], noTags: null, swap: {}, eaten: {}, have: [] }, inbody: [], ibTpl: {}, food: { log: {}, freq: {}, custom: {}, walk: {}, choice: {} }, keyEx: ['incline_db_press', 'lat_pulldown', 'db_lateral_raise'], theme: 'auto' };
 }
-function load() { try { S = JSON.parse(localStorage.getItem(KEY) || 'null') } catch (e) { S = null } if (!S || S.v !== 2) S = blank(); if (!S.diet.noTags) S.diet.noTags = [...D.meals.default_disliked_tags]; if (!S.inbody) S.inbody = []; if (!S.ibTpl) S.ibTpl = {}; }
+function load() { try { S = JSON.parse(localStorage.getItem(KEY) || 'null') } catch (e) { S = null } if (!S || S.v !== 2) S = blank(); if (!S.diet.noTags) S.diet.noTags = [...D.meals.default_disliked_tags]; if (!S.inbody) S.inbody = []; if (!S.ibTpl) S.ibTpl = {}; S.food = { log: {}, freq: {}, custom: {}, walk: {}, choice: {}, ...(S.food || {}) }; }
 function save() { try { localStorage.setItem(KEY, JSON.stringify(S)) } catch (e) { alert('저장 공간이 모자랍니다 — 설정에서 JSON 으로 내보내 두세요') } }
 function theme() { const t = S.theme || 'auto'; if (t === 'auto') document.documentElement.removeAttribute('data-theme'); else document.documentElement.setAttribute('data-theme', t); }
 const N = () => ENG.numbers(D.rules, S.profile, lastIb());
@@ -84,7 +84,9 @@ function startChoice(v) {
 // ── ② 오늘(첫 화면: 운동 1장 + 식단 1장) ──
 function curDay(date) {
   const key = S.cur && S.cur.date === date ? S.cur.key : ENG.nextKey(D, S.profile, S.done);
-  return ENG.buildDay(D, S.profile, key, { swaps: S.swaps[key], deload: ENG.deloadNow(S, date), boost: BO() });
+  const fm = foodDayMods(date), dl = ENG.deloadNow(S, date);
+  const day = ENG.buildDay(D, S.profile, key, { swaps: S.swaps[key], deload: dl, easy: fm.easy && !dl, boost: BO() });   // 어제 술 → '가볍게 할게'를 눌렀을 때만 세트 −1 · RIR +1
+  day.easy = fm.easy && !dl; day.cardio.food = fm.walk; return day;
 }
 function startCur(day, date) {
   const sets = {};
@@ -110,7 +112,7 @@ function carryOver() {   // QA 261030 ①: 자정을 넘겨도 기록이 사라�
   S.cur = null; save(); return ymd();
 }
 function today(v) {
-  const date = carryOver(), p = S.profile, n = N(), train = ENG.isTrainDay(p, date) || extraTrain().includes(date);
+  const date = carryOver(), p = S.profile, n = N(), train = (ENG.isTrainDay(p, date) && !foodDayMods(date).rest) || extraTrain().includes(date);
   $('#sub').textContent = `${md(date)}(${DOW[new Date(date + 'T12:00').getDay()]})${date !== ymd() ? ' · 이어서' : ''}`;
   const day = curDay(date), started = S.cur && S.cur.date === date;
   let work;
@@ -118,18 +120,21 @@ function today(v) {
   else if (!started && !train) work = `<div class="card"><h2>오늘은 쉬는 날</h2><p>${esc(D.rules.cardio[p.goal].rest_day)}</p><p class="hint">다음 순서: ${esc(day.name)}</p><button class="big" id="anyway">그래도 운동하기</button></div>`;
   else work = workoutCard(day, started);
   const meals = ENG.planWeekMeals(D, p, n, S.diet, date, extraTrain())[date], eaten = S.diet.eaten[date] || {};
-  const got = Object.entries(meals).reduce((a, [sl, id]) => a + (eaten[sl] && D.mealById[id] ? D.mealById[id].protein_g : 0), 0);
+  const flog = S.food.log[date] || [];   // 먹은 것을 기록했으면 그 합계 · 아니면 체크한 식단
+  const got = flog.length ? Math.round(ENG.foodTotals(flog).protein) : Object.entries(meals).reduce((a, [sl, id]) => a + (eaten[sl] && D.mealById[id] ? D.mealById[id].protein_g : 0), 0);
   const kc = train ? n.kcal : n.restKcal;
   const backup = S.sessions.length >= 3 && (!S.lastExport || (Date.now() - S.lastExport) > 14 * 864e5);      // QA 참고 ③
-  v.innerHTML = `${backup ? '<div class="card"><p class="small">기록은 이 폰 안에만 있어요 — 가끔 백업해 두세요</p><button id="bk">지금 백업(JSON 내보내기)</button></div>' : ''}${work}
+  v.innerHTML = `${drinkCard(date)}${backup ? '<div class="card"><p class="small">기록은 이 폰 안에만 있어요 — 가끔 백업해 두세요</p><button id="bk">지금 백업(JSON 내보내기)</button></div>' : ''}${work}
    <div class="card" id="dietCard"><h2>오늘 식단 <span class="muted small">${train ? '운동일' : '쉬는 날'}</span></h2>
     <div class="row" style="justify-content:space-between;align-items:baseline"><b style="font-size:30px">${got}<span class="muted" style="font-size:18px"> / ${n.protein}g 단백질</span></b></div>
     <div class="prog" style="height:16px"><i style="width:${Math.min(100, Math.round(got / n.protein * 100))}%"></i></div>
     <p class="hint">칼로리 약 ${kc.toLocaleString()}kcal · 일주일의 80%만 맞추면 성공</p>
     ${Object.entries(meals).map(([sl, id]) => `<div class="check" data-sl="${sl}"><span class="box ${eaten[sl] ? 'done' : ''}">${eaten[sl] ? '✓' : ''}</span><span><b>${sl}</b> ${esc(D.mealById[id]?.name || '후보 없음')}</span></div>`).join('')}
-    <button class="ghost" id="toDiet">식단 바꾸기 · 장보기 →</button></div>`;
+    <div class="row"><button class="primary" id="toFood">+ 먹은 것</button><button class="ghost" id="toDiet">식단 바꾸기 · 장보기 →</button></div></div>`;
   v.querySelectorAll('#dietCard .check').forEach((el) => el.onclick = () => { const sl = el.dataset.sl; S.diet.eaten[date] = { ...eaten, [sl]: !eaten[sl] }; save(); render(); });
   $('#toDiet').onclick = () => { tab = 'diet'; render(); };
+  $('#toFood').onclick = () => { tab = 'diet'; render(); window.scrollTo(0, 0); setTimeout(() => $('#fQ') && $('#fQ').focus(), 50); };
+  bindDrink(v, date);
   if ($('#bk')) $('#bk').onclick = exportJson;
   if ($('#anyway')) $('#anyway').onclick = () => { audioPrime(); startCur(day, date); render(); };
   if ($('#reopen')) $('#reopen').onclick = () => { S.cur.finished = false; S.done = Math.max(0, S.done - 1); S.sessions = S.sessions.filter((s) => !(s.date === date && s.key === S.cur.key)); save(); render(); };
@@ -150,11 +155,11 @@ function workoutCard(day, started) {
      <div class="row"><button class="small ghost" data-alt="1">대체 운동</button><a class="small" href="https://www.youtube.com/results?search_query=${encodeURIComponent(ex.video_query)}" target="_blank" rel="noopener">자세 영상 검색</a></div></div>`;
   };
   const mm = C ? Math.floor(C.cardio.sec / 60) : 0, ss = C ? C.cardio.sec % 60 : 0;
-  return `<div class="card"><h2>오늘 운동 · ${esc(day.name)}${day.deload ? ' <span class="badge">디로드 주</span>' : ''}</h2>
-   ${C ? progressBar() : `<p class="hint">준비 5분 → 근력 ${day.items.length}개 → 유산소 ${day.cardio.minutes}분 → 정리</p><button class="primary big" id="start">시작</button>`}
+  return `<div class="card"><h2>오늘 운동 · ${esc(day.name)}${day.easy ? ' <span class="badge">🍺 가볍게 · 세트 −1 · RIR +1</span>' : day.deload ? ' <span class="badge">디로드 주</span>' : ''}</h2>
+   ${C ? progressBar() : `<p class="hint">준비 5분 → 근력 ${day.items.length}개 → 유산소 ${day.cardio.minutes}분${day.cardio.food ? ` + 🚶 걷기 ${day.cardio.food}분(선택)` : ''} → 정리</p><button class="primary big" id="start">시작</button>`}
    ${C ? `<h3>1. 준비운동</h3>${list(day.warmup, 'warm')}
    <h3>2. 근력</h3>${day.items.map(exCard).join('')}
-   <h3>3. 유산소 · ${esc(day.cardio.type)} ${day.cardio.minutes}분${day.cardio.extra ? `(+${day.cardio.extra}분 가능하면)` : ''}</h3><p class="hint">${esc(day.cardio.detail)}</p>
+   <h3>3. 유산소 · ${esc(day.cardio.type)} ${day.cardio.minutes}분${day.cardio.extra ? `(+${day.cardio.extra}분 가능하면)` : ''}${day.cardio.food ? ` <span class="badge">🚶 걷기 +${day.cardio.food}분(선택)</span>` : ''}</h3><p class="hint">${esc(day.cardio.detail)}</p>
    <div class="row"><b style="font-size:28px;font-variant-numeric:tabular-nums" id="cTime">${String(mm).padStart(2, '0')}:${String(ss).padStart(2, '0')}</b><button id="cGo" class="primary">${cardioRun ? '멈춤' : '시작'}</button><button id="cDone" class="${C.cardio.done ? 'primary' : ''}">${C.cardio.done ? '✓ 했어요' : '했어요'}</button></div>
    <h3>4. 정리 스트레칭</h3>${list(day.cooldown, 'cool')}
    <div class="check" id="tired"><span class="box ${C.tired ? 'done' : ''}">${C.tired ? '✓' : ''}</span><span>오늘 피곤했어요 <span class="hint">(한 주 3번이면 다음 주 디로드)</span></span></div>
@@ -285,6 +290,10 @@ function log(v) {
    ${key.map((k) => `<div class="card"><h2>${esc(exName(k.id))} <span class="hint">최고 무게</span></h2>${few(k.pts) ? need : svgChart(k.pts, { unit: 'kg' })}</div>`).join('')}
    <div class="card"><h2>주간 총 볼륨 <span class="hint">세트×횟수×무게</span></h2>${vol.filter((x) => x.y).length < 2 ? need : svgBars(vol, { unit: 'kg' })}</div>
    <div class="card"><h2>유산소 누적</h2>${cum ? svgChart(cardio, { unit: '분' }) : need}</div>
+   ${(() => { const days = Object.keys(S.food.log).filter((d) => d >= from && S.food.log[d].length).sort(); if (!days.length) return '<div class="card"><h2>먹은 것 · 하루 칼로리 · 단백질</h2><p class="hint">식단 탭에서 먹은 걸 기록하면 보여요</p></div>';
+      const t = days.map((d) => ({ d, ...ENG.foodTotals(S.food.log[d]) })), n = N();
+      return `<div class="card"><h2>하루 단백질 <span class="hint">목표 ${n.protein}g · 먹은 것 기록</span></h2>${t.length < 2 ? need : svgBars(t.map((x) => ({ x: x.d, y: Math.round(x.protein) })), { goal: n.protein, unit: 'g', day: 1 })}</div>
+       <div class="card"><h2>하루 칼로리 <span class="hint">최근 7일 중 목표 ±10% ${(() => { let k = 0; for (let i = 0; i < 7; i++) { const d = addDays(ymd(), -i), l = S.food.log[d]; if (!l || !l.length) continue; const tg = (ENG.isTrainDay(S.profile, d) || extraTrain().includes(d)) ? n.kcal : n.restKcal, e = ENG.foodTotals(l).kcal; if (Math.abs(e - tg) <= tg * 0.1) k++; } return `${k}일${k >= 5 ? ' · 잘한 주' : ''}`; })()}</span></h2>${t.length < 2 ? need : svgChart(t.map((x) => ({ x: x.d, y: Math.round(x.kcal) })), { unit: 'kcal' })}</div>`; })()}
    <div class="card"><h2>식단 달성률 <span class="hint">체크한 끼니 %</span></h2>${dietPct.filter((x) => x.y).length < 1 || weeks.length < 2 ? need : svgBars(dietPct, { unit: '%', goal: 80 })}</div>
    <div class="card"><h2>지난 운동</h2>${S.sessions.slice(-8).reverse().map((s) => `<p class="small">${md(s.date)} · ${esc(s.name)} · ${Object.keys(s.ex).length}종목${s.cardioMin ? ` · 유산소 ${s.cardioMin}분` : ''}${s.deload ? ' · 디로드' : ''}</p>`).join('') || '<p class="muted">아직 없어요</p>'}</div>`;
   if ($('#ibAddL')) $('#ibAddL').onclick = () => ibStart('add');
@@ -322,7 +331,7 @@ function svgBars(pts, o = {}) {
   const W = 320, H = 140, L = 30, T = 12, B = 22, mx = Math.max(o.goal || 0, ...pts.map((p) => p.y)) || 1, bw = (W - L - 6) / pts.length;
   const Y = (y) => H - B - y / mx * (H - T - B);
   return `<svg class="chart" viewBox="0 0 ${W} ${H}" role="img">${o.goal ? `<line x1="${L}" y1="${Y(o.goal)}" x2="${W - 4}" y2="${Y(o.goal)}" class="goal"/><text x="2" y="${Y(o.goal) + 4}" class="ax">${o.goal}</text>` : `<text x="2" y="${T + 4}" class="ax">${Math.round(mx)}</text>`}
-   ${pts.map((p, i) => `<rect x="${L + i * bw + 2}" y="${Y(p.y)}" width="${Math.max(3, bw - 4)}" height="${H - B - Y(p.y)}" class="${o.goal && p.y >= o.goal ? 'bar ok' : 'bar'}"/><rect x="${L + i * bw}" y="${T}" width="${bw}" height="${H - T - B}" class="hit" data-t="${md(p.x)}주 · ${Math.round(p.y).toLocaleString()}${o.unit || ''}"/>`).join('')}
+   ${pts.map((p, i) => `<rect x="${L + i * bw + 2}" y="${Y(p.y)}" width="${Math.max(3, bw - 4)}" height="${H - B - Y(p.y)}" class="${o.goal && p.y >= o.goal ? 'bar ok' : 'bar'}"/><rect x="${L + i * bw}" y="${T}" width="${bw}" height="${H - T - B}" class="hit" data-t="${md(p.x)}${o.day ? '' : '주'} · ${Math.round(p.y).toLocaleString()}${o.unit || ''}"/>`).join('')}
    <text x="${L}" y="${H - 6}" class="ax">${md(pts[0].x)}</text><text x="${W - 4}" y="${H - 6}" class="ax" text-anchor="end">${md(pts[pts.length - 1].x)}</text></svg><p class="tip hint">막대를 누르면 값이 보여요</p>`;
 }
 function bindCharts(v) { v.querySelectorAll('svg.chart').forEach((svg) => svg.addEventListener('click', (e) => { const h = e.target.closest('.hit'); if (!h) return; const tip = svg.nextElementSibling; tip.textContent = h.dataset.t; tip.classList.add('on'); })); }
@@ -333,13 +342,14 @@ function diet(v) {
   $('#sub').textContent = '식단';
   const shop = ENG.shopping(D, week, S.diet.have);
   const trainToday = ENG.isTrainDay(p, date) || xt.includes(date);
-  v.innerHTML = `<div class="card"><h2>오늘 <span class="hint">단백질 ${n.protein}g · ${trainToday ? n.kcal : n.restKcal}kcal · 지방 ${n.fat}g · 탄수 ${n.carb}g</span></h2>
+  v.innerHTML = `${foodCards(date)}<div class="card"><h2>오늘 계획 식단 <span class="hint">단백질 ${n.protein}g · ${trainToday ? n.kcal : n.restKcal}kcal · 지방 ${n.fat}g · 탄수 ${n.carb}g</span></h2>
    <div class="chips" id="mode">${['기본', '집밥만', '외식만', '편의점 허용'].map((m) => `<button data-v="${m}" class="${S.diet.mode === m ? 'on' : ''}">${m}</button>`).join('')}</div>
    ${Object.entries(week[date]).map(([sl, id]) => { const m = D.mealById[id]; return `<div class="meal" data-s="${sl}" data-id="${id || ''}"><span class="box ${eaten[sl] ? 'done' : ''}" data-a="eat">${eaten[sl] ? '✓' : ''}</span>
      <div><b>${sl}</b> <span class="hint">${m ? `${m.protein_g}g · ${m.kcal}kcal · ${esc(m.kind)}` : ''}</span>${m && !ENG.kindsFor(S.diet.mode, sl, date).includes(m.kind) ? `<div class="hint">${esc(S.diet.mode)} 메뉴가 이 끼니엔 없어 ${esc(m.kind)}으로</div>` : ''}<div>${m ? esc(m.name) : '<span class="muted">후보가 없어요</span>'}</div></div>
      <div class="col"><button class="small" data-a="next">다른 것</button><button class="small danger" data-a="no">싫어요</button>${m && m.tags.length ? `<button class="small ghost" data-a="tag">재료 싫어요</button>` : ''}</div></div>`; }).join('')}</div>
    <div class="card"><h2>이번 주 장보기 <span class="hint">월~일 · 집밥 · 간편</span></h2>${shop.map((s) => `<div class="check" data-have="${esc(s.item)}"><span class="box"></span><span>${esc(s.item)} <span class="muted">${esc(s.txt)}</span></span></div>`).join('') || '<p class="muted">없음</p>'}
     ${S.diet.have.length ? `<p class="hint">집에 있음으로 숨김: ${S.diet.have.map(esc).join(', ')} <button class="small ghost" id="unhave">다시 보기</button></p>` : '<p class="hint">이미 집에 있는 건 눌러서 숨기세요</p>'}</div>`;
+  bindFood(v, date);
   $('#mode').onclick = (e) => { const b = e.target.closest('button'); if (b) { S.diet.mode = b.dataset.v; save(); render(); } };
   v.querySelectorAll('.meal').forEach((row) => row.onclick = (e) => {
     const a = e.target.closest('[data-a]')?.dataset.a; if (!a) return; const sl = row.dataset.s, id = row.dataset.id, m = D.mealById[id];
@@ -399,7 +409,7 @@ function exportJson() { S.lastExport = Date.now(); save(); const a = document.cr
 document.getElementById('tabs').addEventListener('click', (e) => { const b = e.target.closest('button'); if (!b) return; tab = b.dataset.tab; render(); window.scrollTo(0, 0); });
 async function boot() {
   const get = (n) => fetch(`data/${n}.json`).then((r) => { if (!r.ok) throw new Error(n); return r.json(); });
-  try { const [rules, exercises, programs, warmups, meals] = await Promise.all(['rules', 'exercises', 'programs', 'warmups', 'meals'].map(get)); D = { rules, exercises, programs, warmups, meals }; }
+  try { const [rules, exercises, programs, warmups, meals] = await Promise.all(['rules', 'exercises', 'programs', 'warmups', 'meals'].map(get)); D = { rules, exercises, programs, warmups, meals }; D.foods = await fetch('data/foods.json').then((r) => (r.ok ? r.json() : null)).catch(() => null); }
   catch (e) { $('#view').innerHTML = '<div class="card"><h2>처음 한 번은 인터넷이 필요해요</h2><p class="muted">연결된 뒤 다시 열면 그다음부터는 인터넷 없이도 열립니다.</p></div>'; return; }
   D.exById = Object.fromEntries(D.exercises.exercises.map((e) => [e.id, e])); D.mealById = Object.fromEntries(D.meals.meals.map((m) => [m.id, m]));
   load(); render();

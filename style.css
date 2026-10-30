@@ -72,3 +72,5 @@ details summary{padding:10px 0;cursor:pointer}
 .locscroll{overflow:auto;flex:1;touch-action:pan-x pan-y pinch-zoom}.locscroll canvas{width:100%;display:block}
 .locwrap[hidden]{display:none}
 .ibweak{border-color:#e0a800;background:rgba(255,196,0,.12)}
+.fsearch{position:relative;margin:8px 0}.flist{display:flex;flex-direction:column;gap:4px;margin-top:4px}.flist button{text-align:left;min-height:44px}
+.fitem{display:inline-flex;align-items:center;gap:2px;margin:2px 0}.fitem button.fdel{min-height:28px;padding:0 6px;border:0}
