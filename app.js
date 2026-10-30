@@ -86,7 +86,7 @@ function curDay(date) {
   const key = S.cur && S.cur.date === date ? S.cur.key : ENG.nextKey(D, S.profile, S.done);
   const fm = foodDayMods(date), dl = ENG.deloadNow(S, date);
   const day = ENG.buildDay(D, S.profile, key, { swaps: S.swaps[key], deload: dl, easy: fm.easy && !dl, boost: BO(), week: planWeek(date) });   // 어제 술 → '가볍게 할게'를 눌렀을 때만 세트 −1 · RIR +1
-  day.easy = fm.easy && !dl; day.cardio.food = fm.walk; return day;
+  day.easy = fm.easy && !dl; day.cardio.food = fm.walk; return S.cur && S.cur.date === date ? withCurExtras(day, S.cur) : day;
 }
 function startCur(day, date) {
   const sets = {};
@@ -150,7 +150,7 @@ function workoutCard(day, started) {
     const ex = D.exById[it.id], last = lastOf(it.id), sets = C ? (C.sets[it.id] = C.sets[it.id] || Array.from({ length: it.sets }, () => ({ w: ex.equipment === '맨몸' ? 0 : '', r: it.reps.lo, done: false }))) : []   /* 하던 운동에 없는 칸은 빈 세트로(예전 키 · 대체 · 정보 변경) */, pr = S.prog[it.id] || {};
     const body = ex.equipment === '맨몸';
     return `<div class="card sub" data-ex="${it.id}" data-slot="${it.slot}"><h3>${esc(ex.name)} <span class="badge">${it.sets}×${it.repsTxt ? esc(it.repsTxt) : repTxt(it.reps)}</span> <span class="hint">쉬기 ${it.rest}초</span></h3>
-     ${it.boost ? `<div class="hint">💪 ${esc(it.boost)}</div>` : ''}<div class="hint">${last ? `지난번 ${md(last.date)} · ${last.sets.map((s) => (body ? '' : `${s.w}kg×`) + s.r).join(', ')}` : '첫 기록 — 편한 무게로 · 자세 먼저'}${pr.up ? ` · <span class="up">지난번 다 채움 → +${ENG.incFor(ex) || '2회'}${ENG.incFor(ex) ? 'kg' : ''}</span>` : ''}${pr.dropped ? ' · 3번 못 채워 −10%' : ''}</div>
+     ${it.extra ? '<div class="hint">하던 운동 — 지금 표엔 없지만 체크한 세트는 그대로 저장돼요</div>' : ''}${it.boost ? `<div class="hint">💪 ${esc(it.boost)}</div>` : ''}<div class="hint">${last ? `지난번 ${md(last.date)} · ${last.sets.map((s) => (body ? '' : `${s.w}kg×`) + s.r).join(', ')}` : '첫 기록 — 편한 무게로 · 자세 먼저'}${pr.up ? ` · <span class="up">지난번 다 채움 → +${ENG.incFor(ex) || '2회'}${ENG.incFor(ex) ? 'kg' : ''}</span>` : ''}${pr.dropped ? ' · 3번 못 채워 −10%' : ''}</div>
      ${C ? sets.map((s, k) => `<div class="set"><span class="n">${k + 1}</span>
        ${body ? '<span class="muted small">맨몸</span>' : `<button class="val" data-f="w" data-k="${k}">${s.w === '' ? '무게' : s.w + 'kg'}</button>`}
        <button class="val" data-f="r" data-k="${k}">${s.r}${it.reps.sec ? '초' : '회'}</button>
@@ -207,11 +207,17 @@ function finish(day) {
   if (!any && !C.cardio.done && !confirm('체크한 세트가 없어요. 그래도 끝낼까요?')) return;
   saveSession(day); save(); render();
 }
+// 하던 기록(cur.sets)에 있는데 오늘 카드에 없는 운동 — 표가 바뀌어도 체크한 세트를 잃지 않게 카드 끝에 '하던 운동'으로(QA 261031)
+function withCurExtras(day, C) {
+  if (!day || !C || !C.sets) return day; const have = new Set(day.items.map((i) => i.id));
+  const extra = Object.keys(C.sets).filter((id) => !have.has(id) && D.exById[id] && C.sets[id].length).map((id) => ({ slot: id, id, sets: C.sets[id].length, reps: ENG.parseReps(String(C.sets[id][0].r || 10)), rest: 60, priority: 9, extra: true }));
+  return extra.length ? { ...day, items: [...day.items, ...extra] } : day;
+}
 function saveSession(day) {
-  const C = S.cur, ex = {};
+  const C = S.cur, ex = {}; day = withCurExtras(day, C);
   let fails = 0;
   for (const it of day.items) {
-    const done = C.sets[it.id].filter((s) => s.done).map((s) => ({ w: +s.w || 0, r: +s.r || 0 }));
+    const done = (C.sets[it.id] || []).filter((s) => s.done).map((s) => ({ w: +s.w || 0, r: +s.r || 0 }));
     if (done.length) { ex[it.id] = done; S.prog[it.id] = ENG.progress(D, S.prog, it, done); if (S.prog[it.id].fails) fails++; }
   }
   S.sessions = S.sessions.filter((s) => !(s.date === C.date && s.key === C.key));

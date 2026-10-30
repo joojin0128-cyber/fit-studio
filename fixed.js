@@ -23,10 +23,10 @@ function fixDay(date) {
 // 하던 운동(cur) 카드 — 요일 표가 바뀌었거나 예전 키(U_A · P_PUSH …)로 시작한 운동도 그 운동 그대로 끝내게(QA 261031)
 function curCardDay(C) {
   const k = String(C.key);
-  if (k.startsWith('FX_') && D.fixed && D.fixed.workouts[k.slice(3)]) return fixBuild(C.date, k.slice(3));
+  if (k.startsWith('FX_') && D.fixed && D.fixed.workouts[k.slice(3)]) return withCurExtras(fixBuild(C.date, k.slice(3)), C);
   if (!D.programs.days[k]) return null;
   const p = { ...S.profile, preset: k.startsWith('P_') ? 'ppl4' : S.profile.preset };
-  return ENG.buildDay(D, p, k, { swaps: S.swaps[k], deload: ENG.deloadNow(S, C.date), boost: BO(), week: planWeek(C.date) });
+  return withCurExtras(ENG.buildDay(D, p, k, { swaps: S.swaps[k], deload: ENG.deloadNow(S, C.date), boost: BO(), week: planWeek(C.date) }), C);
 }
 function fixBuild(date, wkey) {
   const d0 = fixDay(date), d = wkey ? { type: 'workout', key: wkey, W: D.fixed.workouts[wkey] } : d0; if (d.type !== 'workout') return null;
