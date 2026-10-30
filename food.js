@@ -34,7 +34,8 @@ function freqFoods(slot) {
   return Object.entries(keys).sort((a, b) => b[1] - a[1]).slice(0, 8).map(([k]) => (k.startsWith('n:') ? (S.food.custom[k.slice(2)] && { ...S.food.custom[k.slice(2)] }) : D.foodById[k])).filter(Boolean);
 }
 const isTrainOn = (date) => ENG.isTrainDay(S.profile, date) || extraTrain().includes(date);
-const rodFor = (date) => ENG.restOfDay(D, S.profile, N(), S.diet, date, S.food.log[date] || [], isTrainOn(date), date === ymd() ? new Date().getHours() : 0);
+const rodFor = (date) => { const h = new Date().getHours(), hr = date === ymd() ? h : date === addDays(ymd(), -1) && h < 5 ? 24 + h : date < ymd() ? 24 : 0;   // 새벽 5시 전 전날 화면이면 그날 끼니는 다 지난 것
+  return ENG.restOfDay(D, S.profile, N(), S.diet, date, S.food.log[date] || [], isTrainOn(date), hr); };
 const pColor = (v, t) => (v >= t * 0.9 ? 'var(--ok)' : v >= t * 0.6 ? '#e0a800' : 'var(--muted)');   // rules.food_log.summary.colors — 빨강 쓰지 않는다
 
 function foodCards(date) {
@@ -63,7 +64,7 @@ function foodCards(date) {
    ${r.extra ? `<div class="meal"><span class="badge">간식+</span><div><div>${esc(r.extra.name)}</div><span class="hint">${r.extra.protein}g · ${r.extra.kcal}kcal · 단백질이 끼니당 40g 넘게 남아 하나 더</span></div><button class="small" data-atef="${r.extra.id}">먹었어요</button></div>` : ''}
    ${!r.picks.length ? `<p class="hint">오늘 끼니는 끝났어요${r.left.protein >= 20 ? ` — 단백질이 ${r.left.protein}g 남았어요. 자기 전 단백질 음료 하나면 좋아요` : ''}</p>` : ''}
    ${r.under ? '<p class="small">오늘 덜 먹었어요 — 우유 · 바나나 · 견과 중 하나 어때요(선택)</p>' : ''}
-   ${r.over && date === ymd() ? `<p class="small">많이 먹은 날이에요. 굶거나 내일 줄이지 않아도 돼요 — 내일은 평소 계획 그대로.</p>${S.food.walk[date] ? `<p class="small">🚶 걷기 ${S.food.walk[date]}분을 오늘 운동에 붙였어요 <button class="small ghost" id="fWalkX">빼기</button></p>` : '<button class="small" id="fWalk">걷기 20분 붙이기(선택)</button>'}` : ''}
+   ${r.over && date === today0() ? `<p class="small">많이 먹은 날이에요. 굶거나 내일 줄이지 않아도 돼요 — 내일은 평소 계획 그대로.</p>${S.food.walk[date] ? `<p class="small">🚶 걷기 ${S.food.walk[date]}분을 오늘 운동에 붙였어요 <button class="small ghost" id="fWalkX">빼기</button></p>` : '<button class="small" id="fWalk">걷기 20분 붙이기(선택)</button>'}` : ''}
    ${r.drink ? `<p class="small">🍺 술 마신 날 — 물 많이 · 안주는 단백질 먼저${sides.length ? `: ${sides.map((f) => esc(f.name)).join(' · ')}` : ''}. 내일 운동 강도는 오늘 화면에서 고를 수 있어요</p>` : ''}</div>`;
 }
 function bindFood(v, date) {
@@ -80,7 +81,8 @@ function bindFood(v, date) {
   const gen = foodsAll().filter((f) => f.generic);
   $('#fGen').onclick = (e) => { const b = e.target.closest('button'); if (!b) return; const g = gen[+b.dataset.i], n = $('#fN').value.trim(); addFood(date, n ? { ...g, id: null, fid: g.fid, name: `${n}(${g.name})` } : g, FST.qty); done(); };
   $('#fAdd').onclick = () => { const n = $('#fN').value.trim() || '직접 입력', k = parseFloat($('#fK').value), pr = parseFloat($('#fP').value);
-    if (!Number.isFinite(k)) { alert('칼로리를 모르면 위의 보통 한 끼 같은 걸 눌러 주세요'); return; } addFood(date, { name: n, kcal: k, protein: Number.isFinite(pr) ? pr : 0 }, FST.qty); done(); };
+    if (!Number.isFinite(k)) { alert('칼로리를 모르면 위의 보통 한 끼 같은 걸 눌러 주세요'); return; }
+    if (k < 0 || k > 3000 || (Number.isFinite(pr) && (pr < 0 || pr > 200))) { alert('칼로리는 0~3,000, 단백질은 0~200g 사이로 넣어 주세요'); return; } addFood(date, { name: n, kcal: k, protein: Number.isFinite(pr) ? pr : 0 }, FST.qty); done(); };
   v.querySelectorAll('.fdel').forEach((b) => b.onclick = () => { foodLog(date).splice(+b.dataset.i, 1); done(); });
   v.querySelectorAll('[data-ate]').forEach((b) => b.onclick = () => { const m = D.mealById[b.dataset.ate]; addFood(date, D.foodById['m:' + m.id], 1, b.dataset.slot === '운동전' ? '간식' : b.dataset.slot); done(); });
   v.querySelectorAll('[data-atef]').forEach((b) => b.onclick = () => { addFood(date, D.foodById['f:' + b.dataset.atef], 1, '간식'); done(); });

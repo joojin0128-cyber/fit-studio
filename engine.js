@@ -93,8 +93,9 @@ const ENG = (() => {
       const ex = exById[id];
       let sets = it.sets - (p.exp === '처음' ? 1 : 0); sets = Math.max(2, sets);
       if (opts.deload) sets = Math.max(2, Math.round(sets * 0.6));
+      const tSets = sets;   // 시간 예산은 원래 세트로 — '가볍게'여도 운동 개수는 그대로(QA 261030 참고 ②)
       if (opts.easy) sets = Math.max(2, sets - 1);   // 술 다음 날 '가볍게' — 세트 −1 · RIR +1(rules.food_log.alcohol)
-      const rest = restSec(R, ex, goal), t = sets * (40 + rest) + 60;
+      const rest = restSec(R, ex, goal), t = tSets * (40 + rest) + 60;
       if (out.length >= B.max_exercises || used + t > strengthMin * 60) continue;
       used += t;
       out.push({ slot: it.ex, id, sets, reps: it.boost ? parseReps(it.reps) : goalReps(R, ex, it, goal), rest, priority: it.priority, boost: it.boost });
@@ -214,7 +215,7 @@ const ENG = (() => {
     if (left.length && rp / left.length > 40 && D.foods) { const fb = Object.fromEntries(D.foods.foods.map((f) => [f.id, f]));
       const f = ['protein_shake', 'meetree_ball', 'chicken_breast', 'egg'].map((id) => fb[id]).find((x) => x && !diet.noTags.some((t) => x.name.includes(t)));
       if (f) extra = { id: f.id, name: f.name, kcal: f.kcal, protein: f.protein_g, serving: f.serving }; }
-    const under = hour >= 22 && eaten.kcal < kcal * 0.7;
+    const under = (log || []).length > 0 && hour >= 22 && eaten.kcal < kcal * 0.7;   // 하나도 안 적은 날은 띄우지 않는다
     return { eaten: { kcal: Math.round(eaten.kcal), protein: Math.round(eaten.protein), carb: Math.round(eaten.carb), fat: Math.round(eaten.fat) }, target: { kcal, protein: N.protein },
       left: { kcal: Math.round(rk), protein: Math.round(rp) }, picks, extra, over, under, drink, soju: Math.round(sojuEq(log) * 100) / 100 };
   }
